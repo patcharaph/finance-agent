@@ -1,0 +1,703 @@
+{
+  "strategies": [],
+  "lessons": [
+    {
+      "timestamp": 1757518557.569652,
+      "content": {
+        "lesson_type": "investment_goal_analysis_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "task1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "investment_goal_analysis_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "task1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757518582.642663,
+      "content": {
+        "lesson_type": "sentiment_analysis_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "task3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "sentiment_analysis_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "task3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757518594.7763932,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "task2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "task2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "88b77216-1fff-4710-ae1e-f74e07d90f42"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757518716.1307979,
+      "content": {
+        "lesson_type": "investment_goal_analysis_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "t1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "investment_goal_analysis_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "t1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757518731.241175,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "t2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "t2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757518741.4831858,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "t3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "t3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "66921cfb-5fb8-4cb3-9570-77acc59b03af"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757519338.5294116,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757519310_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757519310_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757519346.712454,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757519310_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757519310_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757519356.3896623,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757519310_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757519310_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "b06f8ead-563e-4e2c-9fc8-54ee80d98bce"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521251.9476602,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521247_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521247_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521252.057235,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521247_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521247_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521252.1957092,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521247_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521247_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521252.7472494,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521247_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521247_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521252.868026,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521247_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521247_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "83884339-f81f-41ba-940b-4b3a68f6394c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521265.8514264,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521261_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521261_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521265.9650075,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521261_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521261_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521266.084678,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521261_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521261_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521266.5628805,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521261_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521261_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521266.683541,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521261_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521261_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "d6e852f1-d8f8-4da4-8723-8cf8cfea228e"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521774.5903635,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521766_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521766_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521774.7090747,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521766_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521766_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521774.8720074,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521766_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521766_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521775.4737864,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521766_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521766_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521775.5914555,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521766_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521766_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "5a29249f-55b0-4de6-a1c9-c9f2d4ac635f"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521914.9704273,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521907_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521907_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521915.0945132,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521907_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521907_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521915.2243354,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521907_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521907_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521915.8575516,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521907_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521907_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757521915.9739642,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757521907_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757521907_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
+      },
+      "confidence": 0.5
+    }
+  ],
+  "patterns": {},
+  "performance_history": []
+}

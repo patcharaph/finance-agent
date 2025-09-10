@@ -14,6 +14,8 @@ import os
 import time
 import json
 import warnings
+import uuid
+import logging
 from typing import Dict, List, Any, Optional, Callable, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -41,6 +43,8 @@ class AgentConfig:
     enable_learning: bool = True
     log_level: str = "INFO"
     storage_path: str = "agent_storage"
+    enable_structured_logging: bool = True
+    log_file: str = "agent_logs.json"
 
 
 @dataclass
@@ -77,6 +81,13 @@ class FinanceAgent:
         self.llm_client = llm_client
         self.logger = logger or self._default_logger
         
+        # Generate unique run ID for this session
+        self.run_id = str(uuid.uuid4())
+        
+        # Initialize structured logging
+        self.structured_logs = []
+        self._setup_logging()
+        
         # Initialize components
         self.tools = {
             'data_loader': DataLoader(),
@@ -101,6 +112,7 @@ class FinanceAgent:
         self.loop_count = 0
         
         self.log("INFO", "Finance Agent initialized", {
+            "run_id": self.run_id,
             "config": asdict(self.config),
             "tools_available": list(self.tools.keys()),
             "memory_enabled": self.config.enable_learning
@@ -198,6 +210,7 @@ class FinanceAgent:
     def _execute_agent_loop(self, goal: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute one iteration of the agent loop (Think-Act-Evaluate-Reflect)
+        This is the central brain of the system
         
         Args:
             goal: Current goal
@@ -208,75 +221,35 @@ class FinanceAgent:
         """
         try:
             # THINK: Plan or get next task
-            if self.state.current_plan is None:
-                self.log("INFO", "Creating new execution plan", {"goal": goal})
-                self.state.current_plan = self.planner.create_plan(goal, context)
-                
-                if not self.state.current_plan or not self.state.current_plan.tasks:
-                    return {
-                        "success": False,
-                        "error": "Failed to create execution plan",
-                        "should_continue": False
-                    }
-            
-            # Get next task to execute
-            next_task = self.planner.get_next_task(self.state.current_plan)
-            
-            if next_task is None:
-                # No more tasks, check if plan is complete
-                progress = self.planner.get_plan_progress(self.state.current_plan)
-                if progress.get('is_complete', False):
-                    return {
-                        "success": True,
-                        "message": "Plan completed successfully",
-                        "should_continue": False,
-                        "progress": progress
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": "No tasks available and plan not complete",
-                        "should_continue": False
-                    }
+            think_result = self._think_phase(goal, context)
+            if not think_result['success']:
+                return think_result
             
             # ACT: Execute the task
-            self.log("INFO", f"Executing task: {next_task.description}", {
-                "task_id": next_task.id,
-                "task_type": next_task.task_type.value
-            })
-            
-            self.state.current_task = next_task
-            self.planner.update_task_status(self.state.current_plan, next_task.id, TaskStatus.IN_PROGRESS)
-            
-            task_result = self._execute_task(next_task, context)
+            act_result = self._act_phase(think_result['task'], context)
+            if not act_result['success']:
+                return act_result
             
             # EVALUATE: Assess task results
-            evaluation_result = self._evaluate_task_result(next_task, task_result)
-            
-            # Update task status based on evaluation
-            if evaluation_result.get('success', False):
-                self.planner.update_task_status(
-                    self.state.current_plan, next_task.id, TaskStatus.COMPLETED, task_result
-                )
-            else:
-                self.planner.update_task_status(
-                    self.state.current_plan, next_task.id, TaskStatus.FAILED, 
-                    error=evaluation_result.get('error', 'Task evaluation failed')
-                )
+            evaluate_result = self._evaluate_phase(think_result['task'], act_result['result'])
             
             # REFLECT: Learn from results and adjust
-            reflection_result = self._reflect_on_results(next_task, task_result, evaluation_result)
+            reflect_result = self._reflect_phase(think_result['task'], act_result['result'], evaluate_result)
             
             # Store learning in memory
             if self.state.learning_enabled:
-                self._store_learning(next_task, task_result, evaluation_result, reflection_result)
+                self._store_learning(think_result['task'], act_result['result'], evaluate_result, reflect_result)
+            
+            # Determine if we should continue
+            should_continue = self._should_continue_loop(evaluate_result, reflect_result)
             
             return {
-                "success": evaluation_result.get('success', False),
-                "task_result": task_result,
-                "evaluation": evaluation_result,
-                "reflection": reflection_result,
-                "should_continue": True,
+                "success": evaluate_result.get('success', False),
+                "think": think_result,
+                "act": act_result,
+                "evaluate": evaluate_result,
+                "reflect": reflect_result,
+                "should_continue": should_continue,
                 "progress": self.planner.get_plan_progress(self.state.current_plan)
             }
             
@@ -292,6 +265,308 @@ class FinanceAgent:
                 "error": error_msg,
                 "should_continue": False
             }
+    
+    def _think_phase(self, goal: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """THINK: Plan or get next task"""
+        try:
+            # Create plan if needed
+            if self.state.current_plan is None:
+                self.log("INFO", "THINK: Creating new execution plan", {"goal": goal})
+                self.state.current_plan = self.planner.create_plan(goal, context)
+                
+                if not self.state.current_plan or not self.state.current_plan.tasks:
+                    return {
+                        "success": False,
+                        "error": "Failed to create execution plan",
+                        "phase": "think"
+                    }
+                
+                self.log("INFO", "THINK: Plan created successfully", {
+                    "plan_id": self.state.current_plan.id,
+                    "task_count": len(self.state.current_plan.tasks)
+                })
+            
+            # Get next task to execute
+            next_task = self.planner.get_next_task(self.state.current_plan)
+            
+            if next_task is None:
+                # No more tasks, check if plan is complete
+                progress = self.planner.get_plan_progress(self.state.current_plan)
+                if progress.get('is_complete', False):
+                    return {
+                        "success": True,
+                        "message": "Plan completed successfully",
+                        "phase": "think",
+                        "plan_complete": True,
+                        "progress": progress
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "No tasks available and plan not complete",
+                        "phase": "think"
+                    }
+            
+            self.log("INFO", "THINK: Selected next task", {
+                "task_id": next_task.id,
+                "task_type": next_task.task_type.value,
+                "description": next_task.description
+            })
+            
+            return {
+                "success": True,
+                "task": next_task,
+                "phase": "think",
+                "plan": self.state.current_plan
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Think phase failed: {str(e)}",
+                "phase": "think"
+            }
+    
+    def _act_phase(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
+        """ACT: Execute the task"""
+        try:
+            self.log("INFO", "ACT: Executing task", {
+                "task_id": task.id,
+                "task_type": task.task_type.value,
+                "description": task.description
+            })
+            
+            self.state.current_task = task
+            self.planner.update_task_status(self.state.current_plan, task.id, TaskStatus.IN_PROGRESS)
+            
+            # Execute the task
+            task_result = self._execute_task(task, context)
+            
+            # Update task status based on result
+            if task_result.get('success', False):
+                self.planner.update_task_status(
+                    self.state.current_plan, task.id, TaskStatus.COMPLETED, task_result
+                )
+                self.log("INFO", "ACT: Task completed successfully", {
+                    "task_id": task.id,
+                    "result_keys": list(task_result.keys())
+                })
+            else:
+                self.planner.update_task_status(
+                    self.state.current_plan, task.id, TaskStatus.FAILED, 
+                    error=task_result.get('error', 'Task execution failed')
+                )
+                self.log("WARNING", "ACT: Task failed", {
+                    "task_id": task.id,
+                    "error": task_result.get('error', 'Unknown error')
+                })
+            
+            return {
+                "success": True,
+                "result": task_result,
+                "phase": "act",
+                "task": task
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Act phase failed: {str(e)}",
+                "phase": "act"
+            }
+    
+    def _evaluate_phase(self, task: Task, task_result: Dict[str, Any]) -> Dict[str, Any]:
+        """EVALUATE: Assess task results"""
+        try:
+            self.log("INFO", "EVALUATE: Assessing task results", {
+                "task_id": task.id,
+                "task_type": task.task_type.value
+            })
+            
+            # Evaluate task execution result
+            evaluation_result = self._evaluate_task_result(task, task_result)
+            
+            # Special evaluation for investment decisions
+            if task.task_type == TaskType.MODEL_EVALUATION and task_result.get('success'):
+                # Get risk assessment if available
+                risk_assessment = self.memory['short_term'].retrieve("risk_assessment")
+                
+                # Make investment decision using evaluator
+                if hasattr(self.evaluator, 'make_investment_decision'):
+                    investment_decision = self.evaluator.make_investment_decision(
+                        evaluation_result.get('evaluation_report'), risk_assessment
+                    )
+                    evaluation_result['investment_decision'] = investment_decision
+                    
+                    self.log("INFO", "EVALUATE: Investment decision made", {
+                        "action": investment_decision.get('action'),
+                        "confidence": investment_decision.get('confidence'),
+                        "risk_level": investment_decision.get('risk_level')
+                    })
+            
+            self.log("INFO", "EVALUATE: Evaluation completed", {
+                "task_id": task.id,
+                "success": evaluation_result.get('success', False),
+                "confidence": evaluation_result.get('confidence', 0.0)
+            })
+            
+            return {
+                "success": True,
+                "result": evaluation_result,
+                "phase": "evaluate",
+                "task": task
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Evaluate phase failed: {str(e)}",
+                "phase": "evaluate"
+            }
+    
+    def _reflect_phase(self, task: Task, task_result: Dict[str, Any], evaluation_result: Dict[str, Any]) -> Dict[str, Any]:
+        """REFLECT: Learn from results and adjust"""
+        try:
+            self.log("INFO", "REFLECT: Analyzing results and learning", {
+                "task_id": task.id,
+                "task_type": task.task_type.value
+            })
+            
+            # Basic reflection
+            reflection_result = self._reflect_on_results(task, task_result, evaluation_result)
+            
+            # Enhanced reflection with LLM if available
+            if self.llm_client and hasattr(self.llm_client, 'available') and self.llm_client.available:
+                llm_reflection = self._llm_reflect(task, task_result, evaluation_result, reflection_result)
+                reflection_result['llm_insights'] = llm_reflection
+            
+            # Store insights in long-term memory
+            if reflection_result.get('insights'):
+                self.memory['long_term'].store_lesson(
+                    lesson_type=f"{task.task_type.value}_reflection",
+                    description="; ".join(reflection_result['insights']),
+                    context={
+                        "task_id": task.id,
+                        "success": evaluation_result.get('success', False),
+                        "confidence": evaluation_result.get('confidence', 0.0),
+                        "run_id": self.run_id
+                    },
+                    confidence=evaluation_result.get('confidence', 0.5)
+                )
+            
+            self.log("INFO", "REFLECT: Reflection completed", {
+                "task_id": task.id,
+                "insights_count": len(reflection_result.get('insights', [])),
+                "suggestions_count": len(reflection_result.get('suggestions', []))
+            })
+            
+            return {
+                "success": True,
+                "result": reflection_result,
+                "phase": "reflect",
+                "task": task
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Reflect phase failed: {str(e)}",
+                "phase": "reflect"
+            }
+    
+    def _should_continue_loop(self, evaluation_result: Dict[str, Any], reflection_result: Dict[str, Any]) -> bool:
+        """Determine if the agent should continue the loop"""
+        try:
+            # Check if we've reached max loops
+            if self.loop_count >= self.config.max_loops:
+                self.log("INFO", "Maximum loops reached, stopping", {"loop_count": self.loop_count})
+                return False
+            
+            # Check if we've reached max execution time
+            if time.time() - self.start_time > self.config.max_execution_time:
+                self.log("INFO", "Maximum execution time reached, stopping", {
+                    "execution_time": time.time() - self.start_time
+                })
+                return False
+            
+            # Check if plan is complete
+            if self.state.current_plan:
+                progress = self.planner.get_plan_progress(self.state.current_plan)
+                if progress.get('is_complete', False):
+                    self.log("INFO", "Plan completed, stopping", {"progress": progress})
+                    return False
+            
+            # Check confidence threshold
+            confidence = evaluation_result.get('confidence', 0.0)
+            if confidence >= self.config.confidence_threshold:
+                self.log("INFO", "Confidence threshold reached, stopping", {
+                    "confidence": confidence,
+                    "threshold": self.config.confidence_threshold
+                })
+                return False
+            
+            # Check if reflection suggests stopping
+            if reflection_result.get('result', {}).get('suggestions'):
+                suggestions = reflection_result['result']['suggestions']
+                if any("stop" in suggestion.lower() or "complete" in suggestion.lower() for suggestion in suggestions):
+                    self.log("INFO", "Reflection suggests stopping", {"suggestions": suggestions})
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.log("ERROR", f"Error determining if should continue: {str(e)}")
+            return False
+    
+    def _llm_reflect(self, task: Task, task_result: Dict[str, Any], 
+                    evaluation_result: Dict[str, Any], reflection_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Use LLM for enhanced reflection and insights"""
+        try:
+            system_prompt = """You are a finance analysis expert providing insights and suggestions based on task execution results.
+
+Analyze the task execution, evaluation, and basic reflection to provide:
+1. Key insights about what worked well or poorly
+2. Specific suggestions for improvement
+3. Recommendations for next steps
+4. Any patterns or lessons learned
+
+Be concise but insightful. Focus on actionable recommendations."""
+
+            user_prompt = f"""
+Task: {task.task_type.value} - {task.description}
+Task Result: {json.dumps(task_result, default=str, ensure_ascii=False)}
+Evaluation: {json.dumps(evaluation_result, default=str, ensure_ascii=False)}
+Basic Reflection: {json.dumps(reflection_result, default=str, ensure_ascii=False)}
+
+Provide insights and suggestions in JSON format:
+{{
+  "insights": ["insight1", "insight2"],
+  "suggestions": ["suggestion1", "suggestion2"],
+  "recommendations": ["recommendation1", "recommendation2"],
+  "lessons_learned": ["lesson1", "lesson2"]
+}}
+"""
+
+            response = self.llm_client.chat(system_prompt, user_prompt)
+            
+            if response:
+                try:
+                    llm_insights = json.loads(response)
+                    return llm_insights
+                except json.JSONDecodeError:
+                    # Fallback to text parsing
+                    return {
+                        "insights": [response],
+                        "suggestions": [],
+                        "recommendations": [],
+                        "lessons_learned": []
+                    }
+            
+            return {"insights": [], "suggestions": [], "recommendations": [], "lessons_learned": []}
+            
+        except Exception as e:
+            self.log("WARNING", f"LLM reflection failed: {str(e)}")
+            return {"insights": [], "suggestions": [], "recommendations": [], "lessons_learned": []}
     
     def _execute_task(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -340,6 +615,9 @@ class FinanceAgent:
             
             elif task.task_type == TaskType.REPORT_GENERATION:
                 return self._execute_report_generation(task, context)
+            
+            elif task.task_type == TaskType.INVESTMENT_GOAL_ANALYSIS:
+                return self._execute_investment_goal_analysis(task, context)
             
             else:
                 return {
@@ -660,18 +938,22 @@ class FinanceAgent:
             return {"success": False, "error": str(e)}
     
     def _execute_report_generation(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute report generation task"""
+        """Execute report generation task with LLM explanation"""
         try:
             # Collect all available data
             price_data = self.memory['short_term'].retrieve("price_data")
             evaluation = self.memory['short_term'].retrieve("model_evaluation")
             risk_assessment = self.memory['short_term'].retrieve("risk_assessment")
             predictions = self.memory['short_term'].retrieve("predictions")
+            investment_goal = self.memory['short_term'].retrieve("investment_goal")
+            investment_decision = self.memory['short_term'].retrieve("investment_decision")
             
             # Generate comprehensive report
             report = {
                 "timestamp": datetime.now().isoformat(),
+                "run_id": self.run_id,
                 "goal": self.memory['short_term'].retrieve("current_goal"),
+                "investment_goal": investment_goal,
                 "symbol": context.get('symbol', 'Unknown'),
                 "data_summary": {
                     "price_data_points": len(price_data) if price_data is not None else 0,
@@ -680,13 +962,20 @@ class FinanceAgent:
                 },
                 "model_performance": evaluation if evaluation else {},
                 "risk_assessment": risk_assessment if risk_assessment else {},
+                "investment_decision": investment_decision if investment_decision else {},
                 "predictions": {
                     "values": predictions.tolist() if predictions is not None else [],
                     "horizon": task.parameters.get('horizon', 5)
                 },
                 "recommendations": self._generate_recommendations(evaluation, risk_assessment, predictions),
-                "confidence": evaluation.get('confidence', 0.5) if evaluation else 0.5
+                "confidence": evaluation.get('confidence', 0.5) if evaluation else 0.5,
+                "reasoning_log": self._get_reasoning_log()
             }
+            
+            # Generate LLM explanation if available
+            if self.llm_client and hasattr(self.llm_client, 'available') and self.llm_client.available:
+                llm_explanation = self._generate_llm_explanation(report, context)
+                report['llm_explanation'] = llm_explanation
             
             # Store final report
             self.memory['short_term'].store("final_report", report, {
@@ -694,9 +983,153 @@ class FinanceAgent:
                 "task_id": task.id
             })
             
+            self.log("INFO", "Report generation completed", {
+                "report_keys": list(report.keys()),
+                "has_llm_explanation": 'llm_explanation' in report
+            })
+            
             return {
                 "success": True,
                 "report": report
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def _generate_llm_explanation(self, report: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate human-readable explanation using LLM"""
+        try:
+            system_prompt = """You are a finance expert providing clear, actionable explanations of investment analysis results.
+
+Your task is to explain the analysis results in plain language that a non-technical investor can understand. Focus on:
+1. What the analysis found
+2. What it means for investment decisions
+3. Key risks and opportunities
+4. Clear recommendations
+
+Be concise, professional, and actionable. Avoid technical jargon when possible."""
+
+            user_prompt = f"""
+Analysis Report: {json.dumps(report, default=str, ensure_ascii=False)}
+
+Provide a clear explanation in JSON format:
+{{
+  "executive_summary": "Brief overview of findings",
+  "key_findings": ["finding1", "finding2", "finding3"],
+  "investment_recommendation": "BUY/HOLD/WAIT with reasoning",
+  "risk_factors": ["risk1", "risk2"],
+  "opportunities": ["opportunity1", "opportunity2"],
+  "next_steps": ["step1", "step2"],
+  "confidence_level": "High/Medium/Low with explanation"
+}}
+"""
+
+            response = self.llm_client.chat(system_prompt, user_prompt)
+            
+            if response:
+                try:
+                    explanation = json.loads(response)
+                    return explanation
+                except json.JSONDecodeError:
+                    # Fallback to text explanation
+                    return {
+                        "executive_summary": response,
+                        "key_findings": [],
+                        "investment_recommendation": "See analysis results",
+                        "risk_factors": [],
+                        "opportunities": [],
+                        "next_steps": [],
+                        "confidence_level": "Medium"
+                    }
+            
+            return {
+                "executive_summary": "Analysis completed successfully",
+                "key_findings": [],
+                "investment_recommendation": "Review analysis results",
+                "risk_factors": [],
+                "opportunities": [],
+                "next_steps": [],
+                "confidence_level": "Medium"
+            }
+            
+        except Exception as e:
+            self.log("WARNING", f"LLM explanation generation failed: {str(e)}")
+            return {
+                "executive_summary": "Analysis completed but explanation generation failed",
+                "key_findings": [],
+                "investment_recommendation": "Review analysis results",
+                "risk_factors": [],
+                "opportunities": [],
+                "next_steps": [],
+                "confidence_level": "Medium"
+            }
+    
+    def _execute_investment_goal_analysis(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute investment goal analysis task"""
+        try:
+            # Get investment goal from task parameters or context
+            investment_goal = task.parameters.get('investment_goal', context.get('investment_goal', ''))
+            analysis_type = task.parameters.get('analysis_type', 'individual_stock')
+            
+            # Import settings for investment templates
+            try:
+                from settings import get_investment_goal_template, INVESTMENT_GOAL_TEMPLATES
+                settings_available = True
+            except ImportError:
+                settings_available = False
+            
+            # Determine analysis type and symbols
+            if analysis_type == "SET_INDEX":
+                symbol = "^SETI"
+                preset = "strategy_preset"
+                analysis_description = "SET Index market analysis"
+            elif analysis_type == "INDIVIDUAL_STOCK":
+                symbol = task.parameters.get('symbol', context.get('symbol', 'PTT.BK'))
+                preset = "forecasting_preset"
+                analysis_description = f"Individual stock analysis for {symbol}"
+            elif analysis_type == "PORTFOLIO_OPTIMIZATION":
+                symbols = task.parameters.get('symbols', ['PTT.BK', 'KBANK.BK', 'SCB.BK'])
+                preset = "strategy_preset"
+                analysis_description = f"Portfolio optimization for {len(symbols)} stocks"
+                symbol = symbols[0]  # Primary symbol for data fetching
+            else:
+                symbol = task.parameters.get('symbol', context.get('symbol', 'PTT.BK'))
+                preset = "forecasting_preset"
+                analysis_description = f"General analysis for {symbol}"
+            
+            # Update evaluator with appropriate preset
+            self.evaluator = Evaluator(preset_name=preset)
+            
+            # Store investment goal information
+            investment_info = {
+                "goal": investment_goal,
+                "analysis_type": analysis_type,
+                "symbol": symbol,
+                "symbols": symbols if analysis_type == "PORTFOLIO_OPTIMIZATION" else [symbol],
+                "preset": preset,
+                "description": analysis_description
+            }
+            
+            self.memory['short_term'].store("investment_goal", investment_info, {
+                "timestamp": time.time(),
+                "task_id": task.id
+            })
+            
+            # Log investment goal analysis
+            self.log("INFO", f"Investment goal analysis: {analysis_description}", {
+                "investment_goal": investment_goal,
+                "analysis_type": analysis_type,
+                "symbol": symbol,
+                "preset": preset
+            })
+            
+            return {
+                "success": True,
+                "investment_info": investment_info,
+                "analysis_type": analysis_type,
+                "symbol": symbol,
+                "preset": preset,
+                "description": analysis_description
             }
             
         except Exception as e:
@@ -926,6 +1359,61 @@ class FinanceAgent:
         except:
             return 0.0
     
+    def _setup_logging(self) -> None:
+        """Setup structured logging"""
+        if self.config.enable_structured_logging:
+            # Create logs directory if it doesn't exist
+            log_dir = os.path.dirname(self.config.log_file) if os.path.dirname(self.config.log_file) else "."
+            os.makedirs(log_dir, exist_ok=True)
+            
+            # Setup file logging
+            logging.basicConfig(
+                level=getattr(logging, self.config.log_level.upper()),
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                handlers=[
+                    logging.FileHandler(self.config.log_file),
+                    logging.StreamHandler()
+                ]
+            )
+            self.logger_instance = logging.getLogger(f"FinanceAgent_{self.run_id[:8]}")
+    
+    def log(self, level: str, message: str, data: Dict[str, Any] = None) -> None:
+        """Enhanced logging with structured data and run_id"""
+        timestamp = datetime.now().isoformat()
+        
+        # Create structured log entry
+        log_entry = {
+            "timestamp": timestamp,
+            "run_id": self.run_id,
+            "level": level,
+            "message": message,
+            "data": data or {},
+            "loop_count": self.loop_count,
+            "execution_time": time.time() - self.start_time if self.start_time else 0
+        }
+        
+        # Add to structured logs
+        if self.config.enable_structured_logging:
+            self.structured_logs.append(log_entry)
+            
+            # Log to file if configured
+            if hasattr(self, 'logger_instance'):
+                log_message = f"{message} | RunID: {self.run_id[:8]} | Loop: {self.loop_count}"
+                if data:
+                    log_message += f" | Data: {json.dumps(data, default=str)}"
+                
+                if level == "ERROR":
+                    self.logger_instance.error(log_message)
+                elif level == "WARNING":
+                    self.logger_instance.warning(log_message)
+                elif level == "INFO":
+                    self.logger_instance.info(log_message)
+                else:
+                    self.logger_instance.debug(log_message)
+        
+        # Call original logger
+        self.logger(level, message, data)
+    
     def _default_logger(self, level: str, message: str, data: Dict[str, Any] = None) -> None:
         """Default logging function"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -933,9 +1421,24 @@ class FinanceAgent:
         if data:
             print(f"  Data: {json.dumps(data, indent=2, default=str)}")
     
+    def get_structured_logs(self) -> List[Dict[str, Any]]:
+        """Get all structured logs for this run"""
+        return self.structured_logs.copy()
+    
+    def save_logs(self, filepath: str = None) -> str:
+        """Save structured logs to file"""
+        if not filepath:
+            filepath = f"agent_logs_{self.run_id[:8]}_{int(time.time())}.json"
+        
+        with open(filepath, 'w') as f:
+            json.dump(self.structured_logs, f, indent=2, default=str)
+        
+        return filepath
+    
     def get_agent_status(self) -> Dict[str, Any]:
         """Get current agent status"""
         return {
+            "run_id": self.run_id,
             "config": asdict(self.config),
             "state": asdict(self.state),
             "loop_count": self.loop_count,
@@ -943,8 +1446,24 @@ class FinanceAgent:
             "memory_stats": {
                 "short_term": self.memory['short_term'].get_session_info(),
                 "long_term": self.memory['long_term'].get_memory_stats()
-            }
+            },
+            "structured_logs_count": len(self.structured_logs),
+            "reasoning_log": self._get_reasoning_log()
         }
+    
+    def _get_reasoning_log(self) -> List[Dict[str, Any]]:
+        """Get reasoning log for this run"""
+        reasoning_entries = []
+        for log_entry in self.structured_logs:
+            if log_entry.get('level') in ['INFO', 'WARNING', 'ERROR']:
+                reasoning_entries.append({
+                    "timestamp": log_entry['timestamp'],
+                    "level": log_entry['level'],
+                    "message": log_entry['message'],
+                    "loop": log_entry.get('loop_count', 0),
+                    "execution_time": log_entry.get('execution_time', 0)
+                })
+        return reasoning_entries
 
 
 # Example usage and testing

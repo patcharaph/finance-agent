@@ -25,7 +25,20 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import TimeSeriesSplit
 import ta
+
+# Optional imports for LSTM
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import LSTM, Dense, Dropout
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.callbacks import EarlyStopping
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    tf = None
 
 # Optional import for sentiment analysis
 try:
@@ -76,6 +89,40 @@ class DataLoader:
         self.proxy_config = {}
         print("Info: Cleared proxy configuration")
     
+    def _get_alternative_symbols(self, symbol: str) -> List[str]:
+        """
+        Get alternative symbols to try if the original fails
+        
+        Args:
+            symbol: Original symbol
+            
+        Returns:
+            List of alternative symbols to try
+        """
+        alternatives = []
+        
+        # Thai stock alternatives
+        if symbol.upper() == "PTT.BK":
+            alternatives = ["PTT.BK", "PTT", "PTTEP.BK", "PTTGC.BK"]
+        elif symbol.upper() == "KBANK.BK":
+            alternatives = ["KBANK.BK", "KBANK", "KTB.BK", "SCB.BK"]
+        elif symbol.upper() == "SCB.BK":
+            alternatives = ["SCB.BK", "SCB", "KBANK.BK", "KTB.BK"]
+        elif symbol.upper() == "^SETI":
+            alternatives = ["^SETI", "^SET", "SET.BK", "^SET.BK"]
+        elif symbol.upper() == "^SET.BK":
+            alternatives = ["^SET.BK", "^SETI", "^SET", "SET.BK"]
+        else:
+            # Generic alternatives
+            if symbol.endswith(".BK"):
+                alternatives = [symbol, symbol.replace(".BK", "")]
+            elif not symbol.startswith("^"):
+                alternatives = [symbol, f"{symbol}.BK"]
+            else:
+                alternatives = [symbol]
+        
+        return alternatives
+    
     def fetch_price_data(self, symbol: str, period: str = "2y", interval: str = "1d") -> DataResult:
         """
         Fetch price data from Yahoo Finance with robust error handling
@@ -104,7 +151,7 @@ class DataLoader:
             if not symbol or not isinstance(symbol, str):
                 return DataResult(False, error=f"Invalid symbol format: {symbol}")
             
-            # Try to fetch data with retry mechanism
+                    # Try to fetch data with retry mechanism
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -117,7 +164,11 @@ class DataLoader:
                     else:
                         ticker = yf.Ticker(symbol)
                     
-                    df = ticker.history(period=period, interval=interval, auto_adjust=True)
+                    # Add timeout and better error handling
+                    import warnings
+                    warnings.filterwarnings("ignore", category=FutureWarning)
+                    
+                    df = ticker.history(period=period, interval=interval, auto_adjust=True, timeout=10)
                     
                     if df is None or df.empty:
                         # Check if this is a connectivity issue
@@ -126,6 +177,33 @@ class DataLoader:
                             time.sleep(1)  # Wait before retry
                             continue
                         else:
+                            # Try alternative symbols for Thai stocks
+                            alternative_symbols = self._get_alternative_symbols(symbol)
+                            for alt_symbol in alternative_symbols:
+                                try:
+                                    print(f"Trying alternative symbol: {alt_symbol}")
+                                    alt_ticker = yf.Ticker(alt_symbol)
+                                    alt_df = alt_ticker.history(period=period, interval=interval, auto_adjust=True, timeout=10)
+                                    
+                                    if alt_df is not None and not alt_df.empty:
+                                        print(f"Success with alternative symbol: {alt_symbol}")
+                                        # Standardize column names
+                                        alt_df.columns = [col.lower() for col in alt_df.columns]
+                                        alt_df = alt_df.dropna()
+                                        
+                                        # Cache the result
+                                        cache_key = f"price_{symbol}_{period}_{interval}"
+                                        self.cache[cache_key] = (alt_df, time.time())
+                                        
+                                        return DataResult(True, alt_df, metadata={
+                                            "original_symbol": symbol,
+                                            "used_symbol": alt_symbol,
+                                            "alternative_found": True
+                                        })
+                                except Exception as e:
+                                    print(f"Alternative symbol {alt_symbol} also failed: {str(e)}")
+                                    continue
+                            
                             # Try to generate mock data as fallback
                             print(f"Warning: No data found for {symbol}. Generating mock data for testing...")
                             mock_result = self.generate_mock_data(symbol, period, interval)
@@ -613,14 +691,16 @@ class ModelOps:
         self.models = {
             'random_forest': RandomForestRegressor,
             'gradient_boosting': GradientBoostingRegressor,
-            'linear_regression': LinearRegression
+            'linear_regression': LinearRegression,
+            'lstm': 'lstm'  # Special case for LSTM
         }
         self.scaler = StandardScaler()
+        self.tensorflow_available = TENSORFLOW_AVAILABLE
     
     def train_model(self, X: pd.DataFrame, y: pd.Series, model_type: str = 'random_forest', 
                    test_size: float = 0.2, random_state: int = 42, **kwargs) -> DataResult:
         """
-        Train a machine learning model
+        Train a machine learning model with proper time series validation
         
         Args:
             X: Feature matrix
@@ -637,11 +717,29 @@ class ModelOps:
             if model_type not in self.models:
                 return DataResult(False, error=f"Unknown model type: {model_type}")
             
-            # Split data
-            from sklearn.model_selection import train_test_split
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=test_size, random_state=random_state
-            )
+            # Use TimeSeriesSplit for time series data to prevent data leakage
+            if model_type == 'lstm':
+                return self._train_lstm_model(X, y, test_size, random_state, **kwargs)
+            else:
+                return self._train_sklearn_model(X, y, model_type, test_size, random_state, **kwargs)
+            
+        except Exception as e:
+            return DataResult(False, error=f"Error training model: {str(e)}")
+    
+    def _train_sklearn_model(self, X: pd.DataFrame, y: pd.Series, model_type: str,
+                           test_size: float, random_state: int, **kwargs) -> DataResult:
+        """Train sklearn models with time series split"""
+        try:
+            # Use TimeSeriesSplit instead of random split for time series
+            n_splits = 3
+            tscv = TimeSeriesSplit(n_splits=n_splits)
+            
+            # Get train/test split using time series split
+            splits = list(tscv.split(X))
+            train_idx, test_idx = splits[-1]  # Use the last split
+            
+            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
             
             # Scale features
             X_train_scaled = self.scaler.fit_transform(X_train)
@@ -685,7 +783,8 @@ class ModelOps:
                 'mae_naive': float(mae_naive),
                 'rel_performance': float(rel_performance),
                 'train_samples': len(X_train),
-                'test_samples': len(X_test)
+                'test_samples': len(X_test),
+                'validation_method': 'TimeSeriesSplit'
             }
             
             result_data = {
@@ -700,9 +799,126 @@ class ModelOps:
             return DataResult(True, result_data, metadata=metrics)
             
         except Exception as e:
-            return DataResult(False, error=f"Error training model: {str(e)}")
+            return DataResult(False, error=f"Error training sklearn model: {str(e)}")
     
-    def predict(self, model, scaler, X: pd.DataFrame) -> DataResult:
+    def _train_lstm_model(self, X: pd.DataFrame, y: pd.Series, test_size: float, 
+                         random_state: int, **kwargs) -> DataResult:
+        """Train LSTM model for time series prediction"""
+        try:
+            if not self.tensorflow_available:
+                return DataResult(False, error="TensorFlow not available for LSTM training")
+            
+            # LSTM parameters
+            sequence_length = kwargs.get('sequence_length', 10)
+            lstm_units = kwargs.get('lstm_units', 50)
+            epochs = kwargs.get('epochs', 50)
+            batch_size = kwargs.get('batch_size', 32)
+            dropout_rate = kwargs.get('dropout_rate', 0.2)
+            
+            # Prepare data for LSTM (3D: samples, timesteps, features)
+            X_array = X.values
+            y_array = y.values
+            
+            # Create sequences
+            X_seq, y_seq = self._create_sequences(X_array, y_array, sequence_length)
+            
+            if len(X_seq) < 50:
+                return DataResult(False, error="Insufficient data for LSTM training (need at least 50 samples)")
+            
+            # Split data chronologically (no random split for time series)
+            split_idx = int(len(X_seq) * (1 - test_size))
+            X_train, X_test = X_seq[:split_idx], X_seq[split_idx:]
+            y_train, y_test = y_seq[:split_idx], y_seq[split_idx:]
+            
+            # Scale features
+            X_train_scaled = self.scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1]))
+            X_test_scaled = self.scaler.transform(X_test.reshape(-1, X_test.shape[-1]))
+            
+            # Reshape back to 3D
+            X_train_scaled = X_train_scaled.reshape(X_train.shape)
+            X_test_scaled = X_test_scaled.reshape(X_test.shape)
+            
+            # Build LSTM model
+            model = Sequential([
+                LSTM(lstm_units, return_sequences=True, input_shape=(sequence_length, X.shape[1])),
+                Dropout(dropout_rate),
+                LSTM(lstm_units // 2, return_sequences=False),
+                Dropout(dropout_rate),
+                Dense(25),
+                Dense(1)
+            ])
+            
+            model.compile(optimizer=Adam(learning_rate=0.001), loss='mse', metrics=['mae'])
+            
+            # Early stopping
+            early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+            
+            # Train model
+            history = model.fit(
+                X_train_scaled, y_train,
+                epochs=epochs,
+                batch_size=batch_size,
+                validation_split=0.2,
+                callbacks=[early_stopping],
+                verbose=0
+            )
+            
+            # Make predictions
+            y_pred = model.predict(X_test_scaled, verbose=0).flatten()
+            
+            # Calculate metrics
+            mae = mean_absolute_error(y_test, y_pred)
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+            
+            # Calculate naive baseline
+            y_naive = np.roll(y_test, 1)
+            y_naive[0] = y_test[0]
+            mae_naive = mean_absolute_error(y_test, y_naive)
+            
+            # Relative performance
+            rel_performance = mae / (mae_naive + 1e-9)
+            
+            metrics = {
+                'mae': float(mae),
+                'mse': float(mse),
+                'r2': float(r2),
+                'mae_naive': float(mae_naive),
+                'rel_performance': float(rel_performance),
+                'train_samples': len(X_train),
+                'test_samples': len(X_test),
+                'validation_method': 'ChronologicalSplit',
+                'sequence_length': sequence_length,
+                'lstm_units': lstm_units,
+                'epochs_trained': len(history.history['loss'])
+            }
+            
+            result_data = {
+                'model': model,
+                'scaler': self.scaler,
+                'X_test': X_test,
+                'y_test': y_test,
+                'y_pred': y_pred,
+                'metrics': metrics,
+                'sequence_length': sequence_length
+            }
+            
+            return DataResult(True, result_data, metadata=metrics)
+            
+        except Exception as e:
+            return DataResult(False, error=f"Error training LSTM model: {str(e)}")
+    
+    def _create_sequences(self, X: np.ndarray, y: np.ndarray, sequence_length: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Create sequences for LSTM training"""
+        X_seq, y_seq = [], []
+        
+        for i in range(sequence_length, len(X)):
+            X_seq.append(X[i-sequence_length:i])
+            y_seq.append(y[i])
+        
+        return np.array(X_seq), np.array(y_seq)
+    
+    def predict(self, model, scaler, X: pd.DataFrame, sequence_length: int = None) -> DataResult:
         """
         Make predictions using trained model
         
@@ -710,13 +926,37 @@ class ModelOps:
             model: Trained model
             scaler: Fitted scaler
             X: Feature matrix
+            sequence_length: Sequence length for LSTM models
         
         Returns:
             DataResult with predictions
         """
         try:
-            X_scaled = scaler.transform(X)
-            predictions = model.predict(X_scaled)
+            # Check if this is an LSTM model
+            if hasattr(model, 'predict') and hasattr(model, 'layers'):
+                # LSTM model
+                if sequence_length is None:
+                    return DataResult(False, error="Sequence length required for LSTM predictions")
+                
+                # Create sequences for prediction
+                X_array = X.values
+                if len(X_array) < sequence_length:
+                    return DataResult(False, error=f"Insufficient data for LSTM prediction (need at least {sequence_length} samples)")
+                
+                # Use last sequence_length samples
+                X_seq = X_array[-sequence_length:].reshape(1, sequence_length, -1)
+                
+                # Scale features
+                X_seq_scaled = scaler.transform(X_seq.reshape(-1, X_seq.shape[-1]))
+                X_seq_scaled = X_seq_scaled.reshape(X_seq.shape)
+                
+                # Make prediction
+                predictions = model.predict(X_seq_scaled, verbose=0).flatten()
+                
+            else:
+                # Sklearn model
+                X_scaled = scaler.transform(X)
+                predictions = model.predict(X_scaled)
             
             return DataResult(True, predictions, metadata={"predictions_count": len(predictions)})
             

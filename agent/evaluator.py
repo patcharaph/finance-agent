@@ -16,6 +16,17 @@ from dataclasses import dataclass
 from enum import Enum
 import warnings
 
+# Import settings
+try:
+    from settings import get_evaluation_preset, EvaluationPreset, FORECASTING_PRESET, STRATEGY_PRESET
+    SETTINGS_AVAILABLE = True
+except ImportError:
+    SETTINGS_AVAILABLE = False
+    get_evaluation_preset = None
+    EvaluationPreset = None
+    FORECASTING_PRESET = None
+    STRATEGY_PRESET = None
+
 warnings.filterwarnings("ignore")
 
 
@@ -88,29 +99,48 @@ class EvaluationReport:
 
 class Evaluator:
     """
-    Comprehensive evaluation system for finance analysis
+    Comprehensive evaluation system for finance analysis with preset support
     """
     
-    def __init__(self, default_thresholds: Dict[str, float] = None):
+    def __init__(self, preset_name: str = "forecasting_preset", custom_thresholds: Dict[str, float] = None):
         """
-        Initialize evaluator with default thresholds
+        Initialize evaluator with preset or custom thresholds
         
         Args:
-            default_thresholds: Custom thresholds for evaluation
+            preset_name: Name of evaluation preset to use
+            custom_thresholds: Custom thresholds for evaluation (overrides preset)
         """
-        self.default_thresholds = {
-            'rel_performance_max': 0.98,  # Model should be better than naive
-            'r2_min': 0.1,  # Minimum R² score
-            'mae_max': 0.1,  # Maximum MAE (10% error)
-            'directional_accuracy_min': 0.5,  # Minimum directional accuracy
-            'sharpe_min': 0.2,  # Minimum Sharpe ratio
-            'max_drawdown_max': 0.2,  # Maximum drawdown (20%)
-            'confidence_min': 0.6,  # Minimum confidence level
-            'min_samples': 50  # Minimum samples for reliable evaluation
-        }
+        self.preset_name = preset_name
+        self.preset_config = None
         
-        if default_thresholds:
-            self.default_thresholds.update(default_thresholds)
+        # Load preset configuration
+        if SETTINGS_AVAILABLE and get_evaluation_preset:
+            self.preset_config = get_evaluation_preset(preset_name)
+            self.default_thresholds = self.preset_config.get('thresholds', {})
+        else:
+            # Fallback to default thresholds
+            self.default_thresholds = {
+                'rel_performance_max': 0.98,  # Model should be better than naive
+                'r2_min': 0.1,  # Minimum R² score
+                'mae_max': 0.1,  # Maximum MAE (10% error)
+                'directional_accuracy_min': 0.5,  # Minimum directional accuracy
+                'sharpe_min': 0.2,  # Minimum Sharpe ratio
+                'max_drawdown_max': 0.2,  # Maximum drawdown (20%)
+                'confidence_min': 0.6,  # Minimum confidence level
+                'min_samples': 50  # Minimum samples for reliable evaluation
+            }
+        
+        # Override with custom thresholds if provided
+        if custom_thresholds:
+            self.default_thresholds.update(custom_thresholds)
+        
+        # Get primary metrics and weights from preset
+        if self.preset_config:
+            self.primary_metrics = self.preset_config.get('primary_metrics', [])
+            self.metric_weights = self.preset_config.get('weights', {})
+        else:
+            self.primary_metrics = ['mae', 'r2', 'directional_accuracy', 'rel_performance']
+            self.metric_weights = {'mae': 0.3, 'r2': 0.25, 'directional_accuracy': 0.25, 'rel_performance': 0.2}
     
     def evaluate_model_performance(self, y_true: np.ndarray, y_pred: np.ndarray, 
                                  y_naive: np.ndarray = None,
@@ -433,50 +463,55 @@ class Evaluator:
         failed_checks = 0
         total_checks = 0
         
+        # Use preset-specific evaluation if available
+        if self.preset_config and self.primary_metrics:
+            return self._evaluate_with_preset(metrics, thresholds)
+        
+        # Default evaluation logic
         # Check relative performance
         total_checks += 1
-        if metrics.rel_performance > thresholds['rel_performance_max']:
+        if metrics.rel_performance > thresholds.get('rel_performance_max', 0.98):
             failed_checks += 1
             recommendations.append("Model performs worse than naive baseline - consider feature engineering or different model")
-            warnings.append(f"Relative performance {metrics.rel_performance:.3f} exceeds threshold {thresholds['rel_performance_max']}")
+            warnings.append(f"Relative performance {metrics.rel_performance:.3f} exceeds threshold {thresholds.get('rel_performance_max', 0.98)}")
         
         # Check R² score
         total_checks += 1
-        if metrics.r2 < thresholds['r2_min']:
+        if metrics.r2 < thresholds.get('r2_min', 0.1):
             failed_checks += 1
             recommendations.append("Low R² score - model explains little variance")
-            warnings.append(f"R² score {metrics.r2:.3f} below threshold {thresholds['r2_min']}")
+            warnings.append(f"R² score {metrics.r2:.3f} below threshold {thresholds.get('r2_min', 0.1)}")
         
         # Check MAE
         total_checks += 1
-        if metrics.mae > thresholds['mae_max']:
+        if metrics.mae > thresholds.get('mae_max', 0.1):
             failed_checks += 1
             recommendations.append("High MAE - consider model tuning or additional features")
-            warnings.append(f"MAE {metrics.mae:.3f} exceeds threshold {thresholds['mae_max']}")
+            warnings.append(f"MAE {metrics.mae:.3f} exceeds threshold {thresholds.get('mae_max', 0.1)}")
         
         # Check directional accuracy
         if metrics.directional_accuracy is not None:
             total_checks += 1
-            if metrics.directional_accuracy < thresholds['directional_accuracy_min']:
+            if metrics.directional_accuracy < thresholds.get('directional_accuracy_min', 0.5):
                 failed_checks += 1
                 recommendations.append("Low directional accuracy - model struggles with trend prediction")
-                warnings.append(f"Directional accuracy {metrics.directional_accuracy:.3f} below threshold {thresholds['directional_accuracy_min']}")
+                warnings.append(f"Directional accuracy {metrics.directional_accuracy:.3f} below threshold {thresholds.get('directional_accuracy_min', 0.5)}")
         
         # Check Sharpe ratio
         if metrics.sharpe_ratio is not None:
             total_checks += 1
-            if metrics.sharpe_ratio < thresholds['sharpe_min']:
+            if metrics.sharpe_ratio < thresholds.get('sharpe_min', 0.2):
                 failed_checks += 1
                 recommendations.append("Low Sharpe ratio - risk-adjusted returns are poor")
-                warnings.append(f"Sharpe ratio {metrics.sharpe_ratio:.3f} below threshold {thresholds['sharpe_min']}")
+                warnings.append(f"Sharpe ratio {metrics.sharpe_ratio:.3f} below threshold {thresholds.get('sharpe_min', 0.2)}")
         
         # Check max drawdown
         if metrics.max_drawdown is not None:
             total_checks += 1
-            if abs(metrics.max_drawdown) > thresholds['max_drawdown_max']:
+            if abs(metrics.max_drawdown) > thresholds.get('max_drawdown_max', 0.2):
                 failed_checks += 1
                 recommendations.append("High maximum drawdown - consider risk management")
-                warnings.append(f"Max drawdown {metrics.max_drawdown:.3f} exceeds threshold {thresholds['max_drawdown_max']}")
+                warnings.append(f"Max drawdown {metrics.max_drawdown:.3f} exceeds threshold {thresholds.get('max_drawdown_max', 0.2)}")
         
         # Calculate confidence
         confidence = max(0, 1 - (failed_checks / total_checks))
@@ -493,6 +528,204 @@ class Evaluator:
             reasoning = "Multiple evaluation criteria failed"
         
         return result, recommendations, warnings, confidence, reasoning
+    
+    def _evaluate_with_preset(self, metrics: EvaluationMetrics, thresholds: Dict[str, float]) -> Tuple[EvaluationResult, List[str], List[str], float, str]:
+        """
+        Evaluate using preset-specific logic and weighted scoring
+        
+        Returns:
+            Tuple of (result, recommendations, warnings, confidence, reasoning)
+        """
+        recommendations = []
+        warnings = []
+        failed_checks = 0
+        total_checks = 0
+        weighted_score = 0.0
+        total_weight = 0.0
+        
+        # Evaluate each primary metric
+        for metric in self.primary_metrics:
+            weight = self.metric_weights.get(metric, 0.0)
+            if weight == 0:
+                continue
+                
+            total_weight += weight
+            metric_passed = True
+            
+            if metric == "mae":
+                total_checks += 1
+                threshold = thresholds.get('mae_max', 0.1)
+                if metrics.mae > threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("High MAE - consider model tuning or additional features")
+                    warnings.append(f"MAE {metrics.mae:.3f} exceeds threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = max(0, (threshold - metrics.mae) / threshold)
+                    weighted_score += weight * score
+            
+            elif metric == "r2":
+                total_checks += 1
+                threshold = thresholds.get('r2_min', 0.1)
+                if metrics.r2 < threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("Low R² score - model explains little variance")
+                    warnings.append(f"R² score {metrics.r2:.3f} below threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = min(1, metrics.r2 / max(threshold, 0.1))
+                    weighted_score += weight * score
+            
+            elif metric == "directional_accuracy":
+                total_checks += 1
+                threshold = thresholds.get('directional_accuracy_min', 0.5)
+                if metrics.directional_accuracy is None or metrics.directional_accuracy < threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("Low directional accuracy - model struggles with trend prediction")
+                    warnings.append(f"Directional accuracy {metrics.directional_accuracy:.3f} below threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = min(1, metrics.directional_accuracy / max(threshold, 0.5))
+                    weighted_score += weight * score
+            
+            elif metric == "rel_performance":
+                total_checks += 1
+                threshold = thresholds.get('rel_performance_max', 0.98)
+                if metrics.rel_performance > threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("Model performs worse than naive baseline - consider feature engineering or different model")
+                    warnings.append(f"Relative performance {metrics.rel_performance:.3f} exceeds threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = max(0, (threshold - metrics.rel_performance) / threshold)
+                    weighted_score += weight * score
+            
+            elif metric == "sharpe_ratio":
+                total_checks += 1
+                threshold = thresholds.get('sharpe_min', 0.2)
+                if metrics.sharpe_ratio is None or metrics.sharpe_ratio < threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("Low Sharpe ratio - risk-adjusted returns are poor")
+                    warnings.append(f"Sharpe ratio {metrics.sharpe_ratio:.3f} below threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = min(1, metrics.sharpe_ratio / max(threshold, 0.2))
+                    weighted_score += weight * score
+            
+            elif metric == "max_drawdown":
+                total_checks += 1
+                threshold = thresholds.get('max_drawdown_max', 0.2)
+                if metrics.max_drawdown is None or abs(metrics.max_drawdown) > threshold:
+                    failed_checks += 1
+                    metric_passed = False
+                    recommendations.append("High maximum drawdown - consider risk management")
+                    warnings.append(f"Max drawdown {metrics.max_drawdown:.3f} exceeds threshold {threshold}")
+                else:
+                    # Score based on how much better than threshold
+                    score = max(0, (threshold - abs(metrics.max_drawdown)) / threshold)
+                    weighted_score += weight * score
+        
+        # Calculate confidence based on weighted score
+        if total_weight > 0:
+            confidence = weighted_score / total_weight
+        else:
+            confidence = max(0, 1 - (failed_checks / total_checks))
+        
+        # Determine result based on preset logic
+        min_confidence = thresholds.get('confidence_min', 0.6)
+        
+        if failed_checks == 0 and confidence >= min_confidence:
+            result = EvaluationResult.PASS
+            reasoning = f"All {self.preset_name} criteria passed with confidence {confidence:.2f}"
+        elif failed_checks <= total_checks * 0.3 and confidence >= min_confidence * 0.8:
+            result = EvaluationResult.WARNING
+            reasoning = f"Most {self.preset_name} criteria passed with minor issues (confidence: {confidence:.2f})"
+        else:
+            result = EvaluationResult.FAIL
+            reasoning = f"Multiple {self.preset_name} criteria failed (confidence: {confidence:.2f})"
+        
+        return result, recommendations, warnings, confidence, reasoning
+    
+    def make_investment_decision(self, evaluation_report: EvaluationReport, 
+                               risk_assessment: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Make investment decision based on evaluation and risk assessment
+        
+        Args:
+            evaluation_report: Model evaluation report
+            risk_assessment: Risk assessment data
+        
+        Returns:
+            Investment decision with reasoning
+        """
+        try:
+            decision = {
+                "action": "HOLD",
+                "confidence": evaluation_report.confidence,
+                "reasoning": [],
+                "risk_level": "MEDIUM",
+                "recommendations": evaluation_report.recommendations.copy()
+            }
+            
+            # Determine action based on preset
+            if self.preset_name == "forecasting_preset":
+                # Forecasting-based decision
+                if evaluation_report.result == EvaluationResult.PASS and evaluation_report.confidence >= 0.8:
+                    decision["action"] = "BUY"
+                    decision["reasoning"].append("Strong forecasting performance with high confidence")
+                elif evaluation_report.result == EvaluationResult.PASS and evaluation_report.confidence >= 0.6:
+                    decision["action"] = "HOLD"
+                    decision["reasoning"].append("Good forecasting performance with moderate confidence")
+                else:
+                    decision["action"] = "WAIT"
+                    decision["reasoning"].append("Insufficient forecasting performance")
+            
+            elif self.preset_name == "strategy_preset":
+                # Strategy-based decision
+                if evaluation_report.result == EvaluationResult.PASS and evaluation_report.confidence >= 0.75:
+                    decision["action"] = "BUY"
+                    decision["reasoning"].append("Strong strategy performance with high confidence")
+                elif evaluation_report.result == EvaluationResult.PASS and evaluation_report.confidence >= 0.6:
+                    decision["action"] = "HOLD"
+                    decision["reasoning"].append("Good strategy performance with moderate confidence")
+                else:
+                    decision["action"] = "WAIT"
+                    decision["reasoning"].append("Insufficient strategy performance")
+            
+            # Adjust for risk
+            if risk_assessment:
+                risk_level = risk_assessment.get('risk_level', 'MEDIUM')
+                decision["risk_level"] = risk_level
+                
+                if risk_level == "HIGH":
+                    if decision["action"] == "BUY":
+                        decision["action"] = "HOLD"
+                        decision["reasoning"].append("Downgraded to HOLD due to high risk")
+                    decision["recommendations"].append("Consider position sizing and stop-loss due to high risk")
+                elif risk_level == "LOW":
+                    if decision["action"] == "HOLD" and evaluation_report.confidence >= 0.7:
+                        decision["action"] = "BUY"
+                        decision["reasoning"].append("Upgraded to BUY due to low risk")
+            
+            # Add evaluation reasoning
+            decision["reasoning"].append(f"Evaluation result: {evaluation_report.result.value}")
+            decision["reasoning"].append(f"Primary metrics: {', '.join(self.primary_metrics)}")
+            
+            return decision
+            
+        except Exception as e:
+            return {
+                "action": "WAIT",
+                "confidence": 0.0,
+                "reasoning": [f"Decision making error: {str(e)}"],
+                "risk_level": "UNKNOWN",
+                "recommendations": ["Unable to make investment decision due to error"]
+            }
     
     def get_evaluation_summary(self, reports: List[EvaluationReport]) -> Dict[str, Any]:
         """

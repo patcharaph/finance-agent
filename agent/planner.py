@@ -31,6 +31,7 @@ class TaskType(Enum):
     REPORT_GENERATION = "report_generation"
     PARAMETER_TUNING = "parameter_tuning"
     DATA_QUALITY_CHECK = "data_quality_check"
+    INVESTMENT_GOAL_ANALYSIS = "investment_goal_analysis"
 
 
 class TaskStatus(Enum):
@@ -199,21 +200,27 @@ class Planner:
             return self._create_fallback_plan(goal, context, f"plan_{int(time.time())}")
     
     def _create_llm_plan(self, goal: str, context: Dict[str, Any], plan_id: str) -> Plan:
-        """Create plan using LLM"""
+        """Create plan using LLM with enhanced investment goal support"""
         try:
+            # Check if this is an investment goal analysis
+            investment_goal = context.get('investment_goal', '')
+            analysis_type = context.get('analysis_type', 'individual_stock')
+            
             system_prompt = """You are a finance analysis planning expert. Create a detailed execution plan for finance analysis tasks.
 
 Available tools:
+- investment_goal_analysis: Analyze investment goals and determine analysis type
 - fetch_price_data: Get historical price data
 - fetch_news_sentiment: Get news sentiment analysis
 - calculate_indicators: Calculate technical indicators
 - create_features: Create ML feature matrix
-- train_model: Train ML model
+- train_model: Train ML model (supports random_forest, gradient_boosting, linear_regression, lstm)
 - evaluate_model: Evaluate model performance
 - assess_risk: Perform risk assessment
 - generate_prediction: Generate predictions
 - tune_parameters: Tune model parameters
 - check_data_quality: Check data quality
+- report_generation: Generate comprehensive reports
 
 Return ONLY a valid JSON array of tasks. Each task should have:
 {
@@ -226,7 +233,13 @@ Return ONLY a valid JSON array of tasks. Each task should have:
   "priority": 1
 }
 
-Task types: data_fetch, feature_engineering, model_training, model_evaluation, sentiment_analysis, risk_assessment, prediction, report_generation, parameter_tuning, data_quality_check
+Task types: investment_goal_analysis, data_fetch, feature_engineering, model_training, model_evaluation, sentiment_analysis, risk_assessment, prediction, report_generation, parameter_tuning, data_quality_check
+
+For investment analysis:
+- Start with investment_goal_analysis to understand the goal
+- Use appropriate model types (lstm for time series, random_forest for general)
+- Include risk assessment for investment decisions
+- End with comprehensive report generation
 
 Keep plans focused and efficient. Consider dependencies between tasks."""
 
@@ -234,7 +247,8 @@ Keep plans focused and efficient. Consider dependencies between tasks."""
 Goal: {goal}
 Context: {json.dumps(context, ensure_ascii=False)}
 
-Create a plan with 5-8 tasks maximum. Focus on the most important steps for achieving the goal.
+Create a plan with 6-10 tasks maximum. Focus on the most important steps for achieving the goal.
+If this is an investment analysis, start with investment_goal_analysis and use appropriate evaluation presets.
 """
 
             response = self.llm_client.chat(system_prompt, user_prompt)
@@ -244,9 +258,16 @@ Create a plan with 5-8 tasks maximum. Focus on the most important steps for achi
                 tasks = []
                 
                 for task_data in tasks_data:
+                    # Validate task type
+                    try:
+                        task_type = TaskType(task_data['task_type'])
+                    except ValueError:
+                        print(f"Warning: Unknown task type {task_data['task_type']}, skipping")
+                        continue
+                    
                     task = Task(
                         id=task_data['id'],
-                        task_type=TaskType(task_data['task_type']),
+                        task_type=task_type,
                         description=task_data['description'],
                         parameters=task_data.get('parameters', {}),
                         dependencies=task_data.get('dependencies', []),
