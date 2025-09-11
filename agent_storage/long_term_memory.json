@@ -696,6 +696,720 @@
         "run_id": "1cbc5ad7-eb7b-45b6-9dc6-b0c7de4dbb37"
       },
       "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526135.4461179,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526123_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526123_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526135.558021,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526123_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526123_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526135.7063315,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526123_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526123_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526136.1927338,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526123_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526123_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526136.3232043,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526123_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526123_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "9169bdab-d4a0-415a-900c-cbf351f68f2c"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526174.2410831,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526165_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526165_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526174.3618016,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526165_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526165_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526174.4964232,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526165_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526165_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526174.9764118,
+      "content": {
+        "lesson_type": "model_training_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526165_task_4",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_training_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526165_task_4",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757526175.0893507,
+      "content": {
+        "lesson_type": "model_evaluation_reflection",
+        "description": "Model performs worse than naive baseline; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757526165_task_5",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "model_evaluation_reflection",
+      "description": "Model performs worse than naive baseline; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757526165_task_5",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "8ff29c6a-5f9b-4cb8-af06-da63093a8390"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757601878.5012329,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Low volume + sideways market | Action: Use mean-reversion strategies instead of trend-following",
+        "context": {
+          "goal": "\u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e2b\u0e38\u0e49\u0e19 PTT.BK \u0e41\u0e25\u0e30\u0e43\u0e2b\u0e49\u0e04\u0e33\u0e41\u0e19\u0e30\u0e19\u0e33\u0e01\u0e32\u0e23\u0e25\u0e07\u0e17\u0e38\u0e19",
+          "task_type": "investment_goal_analysis",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Low volume + sideways market",
+        "trigger": "RSI in 40-60 range for >20 sessions",
+        "action": "Use mean-reversion strategies instead of trend-following",
+        "example": "PTT.BK Q3 2024 conditions"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Low volume + sideways market | Action: Use mean-reversion strategies instead of trend-following",
+      "context": {
+        "goal": "\u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e2b\u0e38\u0e49\u0e19 PTT.BK \u0e41\u0e25\u0e30\u0e43\u0e2b\u0e49\u0e04\u0e33\u0e41\u0e19\u0e30\u0e19\u0e33\u0e01\u0e32\u0e23\u0e25\u0e07\u0e17\u0e38\u0e19",
+        "task_type": "investment_goal_analysis",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757601878.5083144,
+      "content": {
+        "lesson_type": "investment_goal_analysis_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757601878_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "investment_goal_analysis_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757601878_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757601889.3057995,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Low volume + sideways market | Action: Use mean-reversion strategies instead of trend-following",
+        "context": {
+          "goal": "\u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e2b\u0e38\u0e49\u0e19 PTT.BK \u0e41\u0e25\u0e30\u0e43\u0e2b\u0e49\u0e04\u0e33\u0e41\u0e19\u0e30\u0e19\u0e33\u0e01\u0e32\u0e23\u0e25\u0e07\u0e17\u0e38\u0e19",
+          "task_type": "data_fetch",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Low volume + sideways market",
+        "trigger": "RSI in 40-60 range for >20 sessions",
+        "action": "Use mean-reversion strategies instead of trend-following",
+        "example": "PTT.BK Q3 2024 conditions"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Low volume + sideways market | Action: Use mean-reversion strategies instead of trend-following",
+      "context": {
+        "goal": "\u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e2b\u0e38\u0e49\u0e19 PTT.BK \u0e41\u0e25\u0e30\u0e43\u0e2b\u0e49\u0e04\u0e33\u0e41\u0e19\u0e30\u0e19\u0e33\u0e01\u0e32\u0e23\u0e25\u0e07\u0e17\u0e38\u0e19",
+        "task_type": "data_fetch",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757601889.3115494,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757601878_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757601878_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "6871d2d6-b437-4286-8eba-c2c828d6d193"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757602931.2166476,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Mock-based analysis + short horizon + energy stock | Action: Require minimum 5y real data with crisis periods. For energy sector, prioritize macro features (Brent crude prices, storage levels)",
+        "context": {
+          "goal": "Analyze PTT.BK stock and provide investment recommendation",
+          "task_type": "data_fetch",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Mock-based analysis + short horizon + energy stock",
+        "trigger": "API failure forcing synthetic data with <3 volatility regimes",
+        "action": "Require minimum 5y real data with crisis periods. For energy sector, prioritize macro features (Brent crude prices, storage levels)",
+        "example": "ASEAN energy stocks during 2020-2023 oil shocks"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Mock-based analysis + short horizon + energy stock | Action: Require minimum 5y real data with crisis periods. For energy sector, prioritize macro features (Brent crude prices, storage levels)",
+      "context": {
+        "goal": "Analyze PTT.BK stock and provide investment recommendation",
+        "task_type": "data_fetch",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757602931.2236457,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757602862_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757602862_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757602952.335197,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Short horizon + limited history causing sample starvation | Action: Auto-adjust horizon to meet min_samples=40 requirement before modeling",
+        "context": {
+          "goal": "Analyze PTT.BK stock and provide investment recommendation",
+          "task_type": "data_quality_check",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Short horizon + limited history causing sample starvation",
+        "trigger": "Horizon < 20 days AND training samples < 100",
+        "action": "Auto-adjust horizon to meet min_samples=40 requirement before modeling",
+        "example": "Energy stocks with <5y history need \u226530D horizons"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Short horizon + limited history causing sample starvation | Action: Auto-adjust horizon to meet min_samples=40 requirement before modeling",
+      "context": {
+        "goal": "Analyze PTT.BK stock and provide investment recommendation",
+        "task_type": "data_quality_check",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757602952.335197,
+      "content": {
+        "lesson_type": "data_quality_check_reflection",
+        "description": "Data quality is acceptable; Low confidence in results",
+        "context": {
+          "task_id": "plan_1757602862_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_quality_check_reflection",
+      "description": "Data quality is acceptable; Low confidence in results",
+      "context": {
+        "task_id": "plan_1757602862_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757602976.5548172,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Low-conviction energy stocks in stable oil price environments | Action: Use paired spread strategies against sector peers rather than absolute price models",
+        "context": {
+          "goal": "Analyze PTT.BK stock and provide investment recommendation",
+          "task_type": "feature_engineering",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Low-conviction energy stocks in stable oil price environments",
+        "trigger": "ATR < 2% of price for 15 sessions + RSI 40-60",
+        "action": "Use paired spread strategies against sector peers rather than absolute price models",
+        "example": "PTT.BK vs TOP.BK spread analysis during 2023 OPEC+ quota stability"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Low-conviction energy stocks in stable oil price environments | Action: Use paired spread strategies against sector peers rather than absolute price models",
+      "context": {
+        "goal": "Analyze PTT.BK stock and provide investment recommendation",
+        "task_type": "feature_engineering",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757602976.5689168,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757602862_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757602862_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "f9c345c5-ca47-4e34-bdbe-1e3b473e3011"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757603605.1155076,
+      "content": {
+        "lesson_type": "reflection_analysis",
+        "description": "Pattern: Energy conglomerates with integrated operations | Action: Require fundamental overlays (P/E vs energy futures) and sector rotation signals",
+        "context": {
+          "goal": "Analyze PTT.BK stock and provide investment recommendation",
+          "task_type": "investment_goal_analysis",
+          "confidence": 0.0,
+          "evidence": {
+            "sharpe_ratio": null,
+            "max_drawdown": null,
+            "mae": null,
+            "directional_accuracy": null,
+            "rel_performance": null,
+            "confidence": 0.0,
+            "success": true
+          },
+          "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+        },
+        "confidence": 0.0
+      },
+      "metadata": {
+        "pattern": "Energy conglomerates with integrated operations",
+        "trigger": "Flat technicals + volatile commodity prices",
+        "action": "Require fundamental overlays (P/E vs energy futures) and sector rotation signals",
+        "example": "PTT.BK 2022 crude volatility period"
+      },
+      "lesson_type": "reflection_analysis",
+      "description": "Pattern: Energy conglomerates with integrated operations | Action: Require fundamental overlays (P/E vs energy futures) and sector rotation signals",
+      "context": {
+        "goal": "Analyze PTT.BK stock and provide investment recommendation",
+        "task_type": "investment_goal_analysis",
+        "confidence": 0.0,
+        "evidence": {
+          "sharpe_ratio": null,
+          "max_drawdown": null,
+          "mae": null,
+          "directional_accuracy": null,
+          "rel_performance": null,
+          "confidence": 0.0,
+          "success": true
+        },
+        "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+      },
+      "confidence": 0.0
+    },
+    {
+      "timestamp": 1757603605.13305,
+      "content": {
+        "lesson_type": "investment_goal_analysis_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757603561_task_1",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "investment_goal_analysis_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757603561_task_1",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757603634.577481,
+      "content": {
+        "lesson_type": "data_fetch_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757603561_task_2",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "data_fetch_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757603561_task_2",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+      },
+      "confidence": 0.5
+    },
+    {
+      "timestamp": 1757603653.8805184,
+      "content": {
+        "lesson_type": "feature_engineering_reflection",
+        "description": "Low confidence in results",
+        "context": {
+          "task_id": "plan_1757603561_task_3",
+          "success": true,
+          "confidence": 0.0,
+          "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+        },
+        "confidence": 0.5
+      },
+      "metadata": {},
+      "lesson_type": "feature_engineering_reflection",
+      "description": "Low confidence in results",
+      "context": {
+        "task_id": "plan_1757603561_task_3",
+        "success": true,
+        "confidence": 0.0,
+        "run_id": "eb57cccb-1d91-4d19-932b-50d84e9bfd70"
+      },
+      "confidence": 0.5
     }
   ],
   "patterns": {},

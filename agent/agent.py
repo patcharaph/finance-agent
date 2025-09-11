@@ -475,7 +475,7 @@ class FinanceAgent:
             }
     
     def _should_continue_loop(self, evaluation_result: Dict[str, Any], reflection_result: Dict[str, Any]) -> bool:
-        """Determine if the agent should continue the loop"""
+        """Determine if the agent should continue the loop based on acceptance criteria"""
         try:
             # Check if we've reached max loops
             if self.loop_count >= self.config.max_loops:
@@ -495,6 +495,18 @@ class FinanceAgent:
                 if progress.get('is_complete', False):
                     self.log("INFO", "Plan completed, stopping", {"progress": progress})
                     return False
+            
+            # Check acceptance criteria from plan metadata
+            if self.state.current_plan and self.state.current_plan.metadata:
+                acceptance_criteria = self.state.current_plan.metadata.get('acceptance_criteria', {})
+                if acceptance_criteria:
+                    # Check if we meet acceptance criteria
+                    if self._check_acceptance_criteria(evaluation_result, acceptance_criteria):
+                        self.log("INFO", "Acceptance criteria met, stopping", {
+                            "criteria": acceptance_criteria,
+                            "evaluation": evaluation_result
+                        })
+                        return False
             
             # Check confidence threshold
             confidence = evaluation_result.get('confidence', 0.0)
@@ -518,55 +530,183 @@ class FinanceAgent:
             self.log("ERROR", f"Error determining if should continue: {str(e)}")
             return False
     
+    def _check_acceptance_criteria(self, evaluation_result: Dict[str, Any], acceptance_criteria: Dict[str, Any]) -> bool:
+        """Check if evaluation results meet acceptance criteria"""
+        try:
+            # Get metrics from evaluation
+            metrics = evaluation_result.get('metrics', {})
+            
+            # Check minimum Sharpe ratio
+            min_sharpe = acceptance_criteria.get('min_sharpe', 0.0)
+            sharpe_ratio = metrics.get('sharpe_ratio', 0.0)
+            if sharpe_ratio is not None and sharpe_ratio < min_sharpe:
+                self.log("INFO", "Sharpe ratio below acceptance criteria", {
+                    "sharpe": sharpe_ratio,
+                    "min_required": min_sharpe
+                })
+                return False
+            
+            # Check maximum drawdown
+            max_mdd_pct = acceptance_criteria.get('max_mdd_pct', 100.0)
+            max_drawdown = metrics.get('max_drawdown', 0.0)
+            if max_drawdown is not None and abs(max_drawdown) > (max_mdd_pct / 100.0):
+                self.log("INFO", "Maximum drawdown exceeds acceptance criteria", {
+                    "mdd": max_drawdown,
+                    "max_allowed": max_mdd_pct / 100.0
+                })
+                return False
+            
+            # Check relative performance (should be better than naive)
+            rel_performance = metrics.get('rel_performance', 1.0)
+            if rel_performance > 0.98:  # Worse than naive baseline
+                self.log("INFO", "Model performance worse than naive baseline", {
+                    "rel_performance": rel_performance
+                })
+                return False
+            
+            # All criteria met
+            self.log("INFO", "All acceptance criteria met", {
+                "sharpe": sharpe_ratio,
+                "mdd": max_drawdown,
+                "rel_performance": rel_performance
+            })
+            return True
+            
+        except Exception as e:
+            self.log("ERROR", f"Error checking acceptance criteria: {str(e)}")
+            return False
+    
     def _llm_reflect(self, task: Task, task_result: Dict[str, Any], 
                     evaluation_result: Dict[str, Any], reflection_result: Dict[str, Any]) -> Dict[str, Any]:
-        """Use LLM for enhanced reflection and insights"""
+        """Use LLM for enhanced reflection with root cause analysis and lesson learning"""
         try:
-            system_prompt = """You are a finance analysis expert providing insights and suggestions based on task execution results.
+            # Check if we need to trigger reflection (evaluation failed or low confidence)
+            confidence = evaluation_result.get('confidence', 0.0)
+            should_reflect = (confidence < self.config.confidence_threshold or 
+                            not evaluation_result.get('success', False))
+            
+            if not should_reflect:
+                return {"insights": [], "suggestions": [], "recommendations": [], "lessons_learned": []}
+            
+            # Get current goal and context
+            goal = self.memory['short_term'].retrieve("current_goal", "")
+            context = self.memory['short_term'].retrieve("execution_context", {})
+            
+            # Get plan metadata for context
+            plan_metadata = {}
+            if self.state.current_plan and self.state.current_plan.metadata:
+                plan_metadata = self.state.current_plan.metadata
+            
+            system_prompt = """You are a reflection analyst.
+Input:
+- GOAL
+- PLAN (JSON)
+- EVIDENCE: key metrics (Sharpe, MDD, MAE, directional_accuracy), data quality flags
+- WHAT_FAILED: brief description
+- CONTEXT: user constraints/preferences
 
-Analyze the task execution, evaluation, and basic reflection to provide:
-1. Key insights about what worked well or poorly
-2. Specific suggestions for improvement
-3. Recommendations for next steps
-4. Any patterns or lessons learned
+Task:
+1) Identify root causes (data coverage? overfitting? wrong horizon? indicator mismatch?).
+2) Suggest concrete plan adjustments (e.g., change indicators, horizon, model, add sentiment).
+3) Distill a reusable LESSON for future runs.
 
-Be concise but insightful. Focus on actionable recommendations."""
+Output JSON (STRICT):
+{
+  "root_causes": ["..."],
+  "suggestions": [
+    {"change":"features","detail":"add EMA_gap, ATR, and Stochastic"},
+    {"change":"horizon","detail":"extend to 60 days for trend stability"},
+    {"change":"model","detail":"try GradientBoosting as alt"}
+  ],
+  "lesson": {
+    "pattern": "e.g., Sideways index + low volume",
+    "trigger": "RSI in 45-55 for >30 sessions, ATR low",
+    "action": "Prefer INDEX_SET with mean-reversion band; avoid breakout models",
+    "example": "SETI 2024-2025 Q2 conditions"
+  }
+}"""
 
+            # Prepare evidence
+            metrics = evaluation_result.get('metrics', {})
+            evidence = {
+                "sharpe_ratio": metrics.get('sharpe_ratio'),
+                "max_drawdown": metrics.get('max_drawdown'),
+                "mae": metrics.get('mae'),
+                "directional_accuracy": metrics.get('directional_accuracy'),
+                "rel_performance": metrics.get('rel_performance'),
+                "confidence": confidence,
+                "success": evaluation_result.get('success', False)
+            }
+            
+            # Determine what failed
+            what_failed = []
+            if not evaluation_result.get('success', False):
+                what_failed.append("Task execution failed")
+            if confidence < self.config.confidence_threshold:
+                what_failed.append(f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold})")
+            if metrics.get('rel_performance', 1.0) > 0.98:
+                what_failed.append("Model worse than naive baseline")
+            
             user_prompt = f"""
+GOAL: {goal}
+PLAN: {json.dumps(plan_metadata, ensure_ascii=False)}
+EVIDENCE: {json.dumps(evidence, ensure_ascii=False)}
+WHAT_FAILED: {', '.join(what_failed) if what_failed else 'No clear failure'}
+CONTEXT: {json.dumps(context, ensure_ascii=False)}
+
 Task: {task.task_type.value} - {task.description}
 Task Result: {json.dumps(task_result, default=str, ensure_ascii=False)}
-Evaluation: {json.dumps(evaluation_result, default=str, ensure_ascii=False)}
-Basic Reflection: {json.dumps(reflection_result, default=str, ensure_ascii=False)}
-
-Provide insights and suggestions in JSON format:
-{{
-  "insights": ["insight1", "insight2"],
-  "suggestions": ["suggestion1", "suggestion2"],
-  "recommendations": ["recommendation1", "recommendation2"],
-  "lessons_learned": ["lesson1", "lesson2"]
-}}
 """
 
             response = self.llm_client.chat(system_prompt, user_prompt)
             
             if response:
                 try:
-                    llm_insights = json.loads(response)
-                    return llm_insights
+                    llm_reflection = json.loads(response)
+                    
+                    # Store lesson in long-term memory if provided
+                    if llm_reflection.get('lesson'):
+                        lesson = llm_reflection['lesson']
+                        self.memory['long_term'].store_lesson(
+                            lesson_type="reflection_analysis",
+                            description=f"Pattern: {lesson.get('pattern', '')} | Action: {lesson.get('action', '')}",
+                            context={
+                                "goal": goal,
+                                "task_type": task.task_type.value,
+                                "confidence": confidence,
+                                "evidence": evidence,
+                                "run_id": self.run_id
+                            },
+                            confidence=confidence,
+                            metadata={
+                                "pattern": lesson.get('pattern', ''),
+                                "trigger": lesson.get('trigger', ''),
+                                "action": lesson.get('action', ''),
+                                "example": lesson.get('example', '')
+                            }
+                        )
+                        
+                        self.log("INFO", "Stored reflection lesson in long-term memory", {
+                            "lesson_type": "reflection_analysis",
+                            "pattern": lesson.get('pattern', ''),
+                            "confidence": confidence
+                        })
+                    
+                    return llm_reflection
+                    
                 except json.JSONDecodeError:
                     # Fallback to text parsing
                     return {
-                        "insights": [response],
+                        "root_causes": [response],
                         "suggestions": [],
-                        "recommendations": [],
-                        "lessons_learned": []
+                        "lesson": {}
                     }
             
-            return {"insights": [], "suggestions": [], "recommendations": [], "lessons_learned": []}
+            return {"root_causes": [], "suggestions": [], "lesson": {}}
             
         except Exception as e:
             self.log("WARNING", f"LLM reflection failed: {str(e)}")
-            return {"insights": [], "suggestions": [], "recommendations": [], "lessons_learned": []}
+            return {"root_causes": [], "suggestions": [], "lesson": {}}
     
     def _execute_task(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -997,31 +1137,90 @@ Provide insights and suggestions in JSON format:
             return {"success": False, "error": str(e)}
     
     def _generate_llm_explanation(self, report: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate human-readable explanation using LLM"""
+        """Generate human-readable explanation using LLM with TH/EN summaries"""
         try:
-            system_prompt = """You are a finance expert providing clear, actionable explanations of investment analysis results.
+            # Get plan metadata for decision context
+            plan_metadata = {}
+            if self.state.current_plan and self.state.current_plan.metadata:
+                plan_metadata = self.state.current_plan.metadata
+            
+            decision = plan_metadata.get('llm_decision', 'SINGLE_STOCK')
+            targets = plan_metadata.get('llm_targets', ['PTT.BK'])
+            rationale = plan_metadata.get('llm_rationale', '')
+            
+            system_prompt = """You are a financial report writer.
+Write a concise, non-promissory report for a retail Thai investor.
 
-Your task is to explain the analysis results in plain language that a non-technical investor can understand. Focus on:
-1. What the analysis found
-2. What it means for investment decisions
-3. Key risks and opportunities
-4. Clear recommendations
+Inputs:
+- DECISION: INDEX_SET | SINGLE_STOCK | NO_TRADE
+- TARGETS: [...symbols...]
+- HORIZON: e.g., 1-3 months
+- KEY EVIDENCE: indicators (RSI/MACD), model metrics (MAE/R2), risk (Sharpe, MDD), sentiment
+- LIMITS: data quality, assumptions
+- If SINGLE_STOCK: provide top pick + 2 alternates with short reasons.
 
-Be concise, professional, and actionable. Avoid technical jargon when possible."""
+Output sections:
+1) Executive summary (TH) – 5-7 บรรทัด
+2) Executive summary (EN) – 5-7 lines
+3) Reasons & evidence (bullet) – TH
+4) Risk & caveats – TH
+5) What to watch next 1–3 จุด – TH
+6) Disclaimer – TH (education only; not investment advice)
 
-            user_prompt = f"""
-Analysis Report: {json.dumps(report, default=str, ensure_ascii=False)}
+Style:
+- Neutral, evidence-based, avoid deterministic language.
+- No financial advice wording beyond educational framing.
 
-Provide a clear explanation in JSON format:
-{{
-  "executive_summary": "Brief overview of findings",
-  "key_findings": ["finding1", "finding2", "finding3"],
+Output JSON format:
+{
+  "executive_summary_th": "สรุปผู้บริหาร (ภาษาไทย)",
+  "executive_summary_en": "Executive Summary (English)",
+  "reasons_evidence_th": ["เหตุผล 1", "เหตุผล 2", "เหตุผล 3"],
+  "risk_caveats_th": ["ความเสี่ยง 1", "ความเสี่ยง 2"],
+  "watch_next_th": ["จุดที่ต้องติดตาม 1", "จุดที่ต้องติดตาม 2"],
+  "disclaimer_th": "ข้อจำกัดความรับผิดชอบ",
   "investment_recommendation": "BUY/HOLD/WAIT with reasoning",
-  "risk_factors": ["risk1", "risk2"],
-  "opportunities": ["opportunity1", "opportunity2"],
-  "next_steps": ["step1", "step2"],
-  "confidence_level": "High/Medium/Low with explanation"
-}}
+  "confidence_level": "High/Medium/Low with explanation",
+  "top_pick": "symbol if SINGLE_STOCK",
+  "alternatives": ["alt1", "alt2"] if SINGLE_STOCK
+}"""
+
+            # Prepare key evidence
+            model_performance = report.get('model_performance', {})
+            risk_assessment = report.get('risk_assessment', {})
+            predictions = report.get('predictions', {})
+            
+            key_evidence = {
+                "decision": decision,
+                "targets": targets,
+                "rationale": rationale,
+                "model_metrics": {
+                    "mae": model_performance.get('metrics', {}).get('mae'),
+                    "r2": model_performance.get('metrics', {}).get('r2'),
+                    "sharpe": model_performance.get('metrics', {}).get('sharpe_ratio'),
+                    "mdd": model_performance.get('metrics', {}).get('max_drawdown'),
+                    "confidence": model_performance.get('confidence')
+                },
+                "risk_metrics": {
+                    "volatility": risk_assessment.get('volatility'),
+                    "risk_level": risk_assessment.get('risk_level'),
+                    "max_drawdown": risk_assessment.get('max_drawdown')
+                },
+                "predictions": {
+                    "values": predictions.get('values', []),
+                    "horizon": predictions.get('horizon', 5)
+                },
+                "data_quality": report.get('data_summary', {})
+            }
+            
+            user_prompt = f"""
+DECISION: {decision}
+TARGETS: {targets}
+HORIZON: {context.get('horizon', 5)} days
+KEY EVIDENCE: {json.dumps(key_evidence, ensure_ascii=False)}
+LIMITS: Data period: {report.get('data_summary', {}).get('data_period', 'Unknown')}, Confidence: {model_performance.get('confidence', 0.5):.2f}
+
+Analysis Report: {json.dumps(report, default=str, ensure_ascii=False)}
 """
 
             response = self.llm_client.chat(system_prompt, user_prompt)
@@ -1029,38 +1228,53 @@ Provide a clear explanation in JSON format:
             if response:
                 try:
                     explanation = json.loads(response)
+                    
+                    # Ensure all required fields are present
+                    explanation.setdefault("executive_summary_th", "การวิเคราะห์เสร็จสิ้น")
+                    explanation.setdefault("executive_summary_en", "Analysis completed successfully")
+                    explanation.setdefault("reasons_evidence_th", ["ข้อมูลจากการวิเคราะห์"])
+                    explanation.setdefault("risk_caveats_th", ["ความเสี่ยงจากการลงทุน"])
+                    explanation.setdefault("watch_next_th", ["ติดตามผลการดำเนินงาน"])
+                    explanation.setdefault("disclaimer_th", "ข้อมูลนี้ใช้เพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน")
+                    explanation.setdefault("investment_recommendation", "HOLD - ดูผลการวิเคราะห์")
+                    explanation.setdefault("confidence_level", "Medium")
+                    
                     return explanation
+                    
                 except json.JSONDecodeError:
                     # Fallback to text explanation
                     return {
-                        "executive_summary": response,
-                        "key_findings": [],
-                        "investment_recommendation": "See analysis results",
-                        "risk_factors": [],
-                        "opportunities": [],
-                        "next_steps": [],
+                        "executive_summary_th": response,
+                        "executive_summary_en": "Analysis completed - see Thai summary",
+                        "reasons_evidence_th": ["ดูผลการวิเคราะห์"],
+                        "risk_caveats_th": ["ความเสี่ยงจากการลงทุน"],
+                        "watch_next_th": ["ติดตามผลการดำเนินงาน"],
+                        "disclaimer_th": "ข้อมูลนี้ใช้เพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน",
+                        "investment_recommendation": "HOLD - ดูผลการวิเคราะห์",
                         "confidence_level": "Medium"
                     }
             
             return {
-                "executive_summary": "Analysis completed successfully",
-                "key_findings": [],
-                "investment_recommendation": "Review analysis results",
-                "risk_factors": [],
-                "opportunities": [],
-                "next_steps": [],
+                "executive_summary_th": "การวิเคราะห์เสร็จสิ้น",
+                "executive_summary_en": "Analysis completed successfully",
+                "reasons_evidence_th": ["ข้อมูลจากการวิเคราะห์"],
+                "risk_caveats_th": ["ความเสี่ยงจากการลงทุน"],
+                "watch_next_th": ["ติดตามผลการดำเนินงาน"],
+                "disclaimer_th": "ข้อมูลนี้ใช้เพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน",
+                "investment_recommendation": "HOLD - ดูผลการวิเคราะห์",
                 "confidence_level": "Medium"
             }
             
         except Exception as e:
             self.log("WARNING", f"LLM explanation generation failed: {str(e)}")
             return {
-                "executive_summary": "Analysis completed but explanation generation failed",
-                "key_findings": [],
-                "investment_recommendation": "Review analysis results",
-                "risk_factors": [],
-                "opportunities": [],
-                "next_steps": [],
+                "executive_summary_th": "การวิเคราะห์เสร็จสิ้น แต่การสร้างคำอธิบายล้มเหลว",
+                "executive_summary_en": "Analysis completed but explanation generation failed",
+                "reasons_evidence_th": ["ดูผลการวิเคราะห์"],
+                "risk_caveats_th": ["ความเสี่ยงจากการลงทุน"],
+                "watch_next_th": ["ติดตามผลการดำเนินงาน"],
+                "disclaimer_th": "ข้อมูลนี้ใช้เพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน",
+                "investment_recommendation": "HOLD - ดูผลการวิเคราะห์",
                 "confidence_level": "Medium"
             }
     

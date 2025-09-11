@@ -10,6 +10,8 @@ A sophisticated finance analysis agent with planning, reflection, memory, and to
 - **📊 Evaluating**: Comprehensive performance evaluation and quality checks
 - **🔄 Reflecting**: Learning from results and adjusting strategies
 - **💾 Memory**: Short-term and long-term memory for learning and adaptation
+ - **🧭 Decisioning (Planner+)**: INDEX_SET vs SINGLE_STOCK vs NO_TRADE with rationale
+ - **📝 Reporting (TH/EN)**: Bilingual, non‑promissory executive summaries and rationale
 
 ### Analysis Tools
 - **📈 Data Loading**: Fetch historical price data from Yahoo Finance
@@ -75,6 +77,24 @@ python app_demo.py --symbol PTT.BK --horizon 10 --period 2y --plan-type comprehe
 python app_demo.py --help
 ```
 
+#### ⚡ Optimized (Lite) Agent
+Quick, streamlined run with the optimized agent (smaller codepath, same core flow):
+```bash
+python demo_optimized.py
+```
+
+#### 🐍 Python API (Optimized)
+```python
+from agent.agent_optimized import OptimizedFinanceAgent, AgentConfig
+
+config = AgentConfig(max_loops=3, confidence_threshold=0.7, enable_llm_planning=True)
+agent = OptimizedFinanceAgent(config, llm_client)
+
+goal = "ช่วยประเมินว่าควรลงทุนใน SET หรือเลือกหุ้นรายตัวใน 1-3 เดือนข้างหน้า"
+context = {"budget_thb": 200000, "risk_tolerance": "medium", "time_horizon": "1-3m"}
+result = agent.run(goal, context)
+```
+
 #### 🐍 Python API
 ```python
 from agent.agent import FinanceAgent, AgentConfig
@@ -104,10 +124,16 @@ finance-agent/
 └── agent/                   # Core agent modules
     ├── __init__.py          # Package initialization
     ├── agent.py             # Main agent orchestrator
+    ├── agent_optimized.py   # Optimized (lite) agent orchestrator
     ├── tools.py             # Data loading, indicators, ML tools
     ├── memory.py            # Short-term and long-term memory
     ├── evaluator.py         # Performance evaluation system
-    └── planner.py           # Task planning and decomposition
+    ├── planner.py           # Task planning and decomposition
+    └── planner_optimized.py # Optimized (lite) planner
+├── demo_optimized.py        # Optimized agent demo (quick start)
+├── test_enhanced_features.py# E2E test for Planner/Loop/Reflect/Report
+├── ENHANCED_FEATURES_IMPLEMENTATION.md # Details of the 4 new features
+└── OPTIMIZATION_SUMMARY.md  # Summary of code size/perf optimization
 ```
 
 ## 🔧 Configuration
@@ -167,9 +193,9 @@ flowchart TD
     C -->|Indicators/Factors| D
     D --> E[Reasoner: เลือก/จูนโมเดล]
     E --> F[Train/Infer]
-    F --> G[Evaluator: metrics + constraints]
-    G -->|Pass| H[Report Generator: recs + rationale]
-    G -->|Fail| I[Reflector: วิเคราะห์สาเหตุ, ปรับแผน]
+    F --> G[Evaluator: metrics + constraints (Sharpe/MDD/RelPerf)]
+    G -->|Pass| H[Report (TH/EN): executive summaries + rationale]
+    G -->|Fail| I[Reflector: วิเคราะห์สาเหตุ, ปรับแผน + store lesson]
     I --> B
     H --> J[Long-term Memory: store playbook/lessons]
 ```
@@ -231,6 +257,9 @@ python -m agent.agent
 
 # Test full system
 python app_demo.py --symbol PTT.BK --horizon 5
+
+# Test enhanced features end-to-end
+python test_enhanced_features.py
 ```
 
 ### Adding New Tools

@@ -200,96 +200,135 @@ class Planner:
             return self._create_fallback_plan(goal, context, f"plan_{int(time.time())}")
     
     def _create_llm_plan(self, goal: str, context: Dict[str, Any], plan_id: str) -> Plan:
-        """Create plan using LLM with enhanced investment goal support"""
+        """Create plan using LLM with enhanced investment decision logic"""
         try:
-            # Check if this is an investment goal analysis
-            investment_goal = context.get('investment_goal', '')
-            analysis_type = context.get('analysis_type', 'individual_stock')
-            
-            system_prompt = """You are a finance analysis planning expert. Create a detailed execution plan for finance analysis tasks.
+            # Use the new LLM Planner prompt for investment decisions
+            system_prompt = """You are a financial research planner for the "Finance Agent".
+Given a USER GOAL and CONTEXT, produce an executable plan for the agent.
 
-Available tools:
-- investment_goal_analysis: Analyze investment goals and determine analysis type
-- fetch_price_data: Get historical price data
-- fetch_news_sentiment: Get news sentiment analysis
-- calculate_indicators: Calculate technical indicators
-- create_features: Create ML feature matrix
-- train_model: Train ML model (supports random_forest, gradient_boosting, linear_regression, lstm)
-- evaluate_model: Evaluate model performance
-- assess_risk: Perform risk assessment
-- generate_prediction: Generate predictions
-- tune_parameters: Tune model parameters
-- check_data_quality: Check data quality
-- report_generation: Generate comprehensive reports
+Decision first:
+- Choose one of: ["INDEX_SET", "SINGLE_STOCK", "NO_TRADE"] with rationale.
+- If SINGLE_STOCK, propose 3 candidate tickers with reasons (Thai market suffix .BK).
 
-Return ONLY a valid JSON array of tasks. Each task should have:
-{
-  "id": "unique_task_id",
-  "task_type": "task_type_enum",
-  "description": "clear description",
-  "parameters": {"key": "value"},
-  "dependencies": ["task_id1", "task_id2"],
-  "estimated_duration": 30.0,
-  "priority": 1
-}
+Constraints & Criteria:
+- Focus on Thai market (Yahoo Finance symbols, e.g., ^SETI, ^SET50, PTT.BK).
+- time_horizon: short (5-10d) / medium (1-3m) / long (6-12m).
+- Min quality gate to proceed: Sharpe > 0 (backtest mini) AND MDD within user's tolerance if provided.
+- Respect confidence_threshold from config.
 
-Task types: investment_goal_analysis, data_fetch, feature_engineering, model_training, model_evaluation, sentiment_analysis, risk_assessment, prediction, report_generation, parameter_tuning, data_quality_check
-
-For investment analysis:
-- Start with investment_goal_analysis to understand the goal
-- Use appropriate model types (lstm for time series, random_forest for general)
-- Include risk assessment for investment decisions
-- End with comprehensive report generation
-
-Keep plans focused and efficient. Consider dependencies between tasks."""
+Output MUST be valid JSON following PLAN_SCHEMA and do not add extra text."""
 
             user_prompt = f"""
-Goal: {goal}
-Context: {json.dumps(context, ensure_ascii=False)}
+USER_GOAL: "{goal}"
+CONTEXT: {json.dumps(context, ensure_ascii=False)}
 
-Create a plan with 6-10 tasks maximum. Focus on the most important steps for achieving the goal.
-If this is an investment analysis, start with investment_goal_analysis and use appropriate evaluation presets.
+PLAN_SCHEMA:
+{{
+  "decision": "INDEX_SET|SINGLE_STOCK|NO_TRADE",
+  "why_decision": "string",
+  "targets": ["^SETI"|"^SET50"|["PTT.BK","KBANK.BK","ADVANC.BK"]],
+  "subtasks": [
+    {{"id":"fetch_data", "tool":"data.load_prices", "args":{{"symbols":[...], "period":"2y", "interval":"1d"}}}},
+    {{"id":"features", "tool":"indicators.compute", "args":{{"indicators":["RSI","MACD","EMA_10","EMA_20","BBANDS"]}}}},
+    {{"id":"model", "tool":"ml.train_predict", "args":{{"algo":"RandomForest", "horizon_days":20}}}},
+    {{"id":"risk", "tool":"risk.assess", "args":{{"mdd_window":"1y"}}}},
+    {{"id":"mini_backtest", "tool":"backtest.quick", "args":{{"metric":["Sharpe","MDD"]}}}},
+    {{"id":"decide", "tool":"decision.summarize", "args":{{}}}}
+  ],
+  "acceptance": {{"min_sharpe": 0.0, "max_mdd_pct": 20}},
+  "report_needs": ["executive_summary","rationale_th_en","disclaimer"]
+}}
 """
 
             response = self.llm_client.chat(system_prompt, user_prompt)
             
             if response:
-                tasks_data = json.loads(response)
-                tasks = []
-                
-                for task_data in tasks_data:
-                    # Validate task type
-                    try:
-                        task_type = TaskType(task_data['task_type'])
-                    except ValueError:
-                        print(f"Warning: Unknown task type {task_data['task_type']}, skipping")
-                        continue
+                try:
+                    plan_data = json.loads(response)
                     
-                    task = Task(
-                        id=task_data['id'],
-                        task_type=task_type,
-                        description=task_data['description'],
-                        parameters=task_data.get('parameters', {}),
-                        dependencies=task_data.get('dependencies', []),
-                        estimated_duration=task_data.get('estimated_duration', 30.0),
-                        priority=task_data.get('priority', 1)
+                    # Convert LLM plan to our task structure
+                    tasks = []
+                    decision = plan_data.get('decision', 'SINGLE_STOCK')
+                    targets = plan_data.get('targets', ['PTT.BK'])
+                    subtasks = plan_data.get('subtasks', [])
+                    
+                    # Create investment goal analysis task first
+                    task_id = f"{plan_id}_task_1"
+                    investment_task = Task(
+                        id=task_id,
+                        task_type=TaskType.INVESTMENT_GOAL_ANALYSIS,
+                        description=f"Analyze investment goal: {decision}",
+                        parameters={
+                            "investment_goal": goal,
+                            "analysis_type": decision.lower(),
+                            "targets": targets,
+                            "decision_rationale": plan_data.get('why_decision', ''),
+                            "acceptance_criteria": plan_data.get('acceptance', {}),
+                            "report_needs": plan_data.get('report_needs', [])
+                        },
+                        dependencies=[],
+                        estimated_duration=10.0,
+                        priority=1
                     )
-                    tasks.append(task)
-                
-                return Plan(
-                    id=plan_id,
-                    goal=goal,
-                    tasks=tasks,
-                    created_at=time.time(),
-                    updated_at=time.time(),
-                    metadata=context
-                )
+                    tasks.append(investment_task)
+                    
+                    # Convert subtasks to our task format
+                    for i, subtask in enumerate(subtasks):
+                        task_id = f"{plan_id}_task_{i+2}"
+                        tool = subtask.get('tool', '')
+                        args = subtask.get('args', {})
+                        
+                        # Map tool names to task types
+                        task_type = self._map_tool_to_task_type(tool)
+                        
+                        task = Task(
+                            id=task_id,
+                            task_type=task_type,
+                            description=subtask.get('id', f"Execute {tool}"),
+                            parameters=args,
+                            dependencies=[f"{plan_id}_task_1"] if i == 0 else [f"{plan_id}_task_{i+1}"],
+                            estimated_duration=30.0,
+                            priority=i+2
+                        )
+                        tasks.append(task)
+                    
+                    return Plan(
+                        id=plan_id,
+                        goal=goal,
+                        tasks=tasks,
+                        created_at=time.time(),
+                        updated_at=time.time(),
+                        metadata={
+                            **context,
+                            "llm_decision": decision,
+                            "llm_targets": targets,
+                            "llm_rationale": plan_data.get('why_decision', ''),
+                            "acceptance_criteria": plan_data.get('acceptance', {}),
+                            "report_needs": plan_data.get('report_needs', [])
+                        }
+                    )
+                    
+                except json.JSONDecodeError as e:
+                    print(f"Failed to parse LLM response as JSON: {str(e)}")
+                    print(f"Response: {response}")
         
         except Exception as e:
             print(f"LLM planning failed: {str(e)}")
         
         # Fallback to template planning
         return self._create_template_plan(goal, context, plan_id, "basic_analysis")
+    
+    def _map_tool_to_task_type(self, tool: str) -> TaskType:
+        """Map tool names to task types"""
+        tool_mapping = {
+            "data.load_prices": TaskType.DATA_FETCH,
+            "indicators.compute": TaskType.FEATURE_ENGINEERING,
+            "ml.train_predict": TaskType.MODEL_TRAINING,
+            "risk.assess": TaskType.RISK_ASSESSMENT,
+            "backtest.quick": TaskType.MODEL_EVALUATION,
+            "decision.summarize": TaskType.REPORT_GENERATION
+        }
+        return tool_mapping.get(tool, TaskType.DATA_FETCH)
     
     def _create_template_plan(self, goal: str, context: Dict[str, Any], 
                             plan_id: str, plan_type: str) -> Plan:
