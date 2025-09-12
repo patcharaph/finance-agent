@@ -22,8 +22,8 @@ A sophisticated finance analysis agent with planning, reflection, memory, and to
 - **🔮 Predictions**: Price prediction with confidence intervals
 
 ### Interfaces
+- **🌐 Streamlit Web App**: Main production interface with enhanced data fetching and professional UI
 - **🖥️ CLI Interface**: Command-line tool for batch analysis
-- **🌐 Streamlit Web App**: Interactive web interface with real-time charts
 - **🔌 API Ready**: Modular design for easy integration
 
 ## 🚀 Quick Start
@@ -61,9 +61,16 @@ A sophisticated finance analysis agent with planning, reflection, memory, and to
 
 #### 🌐 Streamlit Web Interface (Recommended)
 ```bash
-streamlit run app_demo.py
+streamlit run app_streamlit_news.py
 ```
 Then open your browser to `http://localhost:8501`
+
+**Features of the main app:**
+- ✅ **Enhanced Data Fetching**: Uses `yf.download()` with robust fallback to mock data
+- ✅ **Professional UI**: Clean 3-input interface with space theme
+- ✅ **Investment Analysis**: Comprehensive reports with Thai/English summaries
+- ✅ **Error Handling**: Graceful fallback when Yahoo Finance is unavailable
+- ✅ **Real-time Charts**: Interactive price charts and technical indicators
 
 #### 🖥️ Command Line Interface
 ```bash
@@ -119,8 +126,8 @@ finance-agent/
 ├── README.md                 # This file
 ├── requirements.txt          # Python dependencies
 ├── Makefile                 # Build and run commands
-├── app_demo.py              # Main demo application (CLI + Streamlit)
-├── app_streamlit_news.py    # Legacy Streamlit app
+├── app_demo.py              # CLI demo application
+├── app_streamlit_news.py    # Main Streamlit web app (Production)
 └── agent/                   # Core agent modules
     ├── __init__.py          # Package initialization
     ├── agent.py             # Main agent orchestrator
@@ -255,8 +262,11 @@ python -m agent.evaluator
 python -m agent.planner
 python -m agent.agent
 
-# Test full system
+# Test full system (CLI)
 python app_demo.py --symbol PTT.BK --horizon 5
+
+# Test web interface
+streamlit run app_streamlit_news.py
 
 # Test enhanced features end-to-end
 python test_enhanced_features.py
