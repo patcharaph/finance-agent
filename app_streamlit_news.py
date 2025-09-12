@@ -11,7 +11,6 @@ import os
 import time
 import json
 import warnings
-from dataclasses import dataclass
 from typing import Callable, Dict, Any, List
 
 warnings.filterwarnings("ignore")
@@ -128,8 +127,9 @@ Guardrails:
 """
 
 # ---------------------- Tools: Data/Features/Model ----------------------
+
 def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
-    """Fetch price data using test.py method"""
+    """ดึงข้อมูลหุ้นพร้อม fallback เป็นข้อมูลจำลอง (ใช้วิธีเดียวกับ test.py)"""
     
     print(f"🔄 กำลังดึงข้อมูล {symbol}...")
     
@@ -146,10 +146,9 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
         else:
             start_date = end_date - timedelta(days=730)
         
-        # Use test.py method - try real data first
-        df = yf.download(symbol, start=start_date.strftime("%Y-%m-%d"), 
-                        end=end_date.strftime("%Y-%m-%d"), 
-                        interval=interval, auto_adjust=True, progress=False)
+        # ลองดึงข้อมูลจริงด้วย yf.download()
+        df = yf.download(symbol, period=period, interval=interval, 
+                        auto_adjust=True, progress=False, threads=False)
         
         if df is not None and not df.empty:
             print(f"✅ ดึงข้อมูล {symbol} สำเร็จ! ({len(df)} วัน)")
@@ -166,7 +165,7 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
         print(f"❌ ไม่สามารถดึงข้อมูล {symbol} ได้: {e}")
         print("🔄 สร้างข้อมูลจำลองแทน...")
         
-        # Create realistic dummy data using test.py method
+        # สร้างข้อมูลจำลอง (ใช้วิธีเดียวกับ test.py)
         from datetime import datetime, timedelta
         end_date = datetime.now()
         if period == "2y":
@@ -181,7 +180,7 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
         dates = pd.date_range(start=start_date, end=end_date, freq='D')
         n_days = len(dates)
         
-        # Set initial price based on symbol (from test.py)
+        # ราคาเริ่มต้นตามสัญลักษณ์ (ใช้วิธีเดียวกับ test.py)
         if "PTT" in symbol:
             initial_price = 35.0  # PTT ราคาประมาณ 35 บาท
         elif "AAPL" in symbol:
@@ -190,10 +189,12 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
             initial_price = 400.0
         elif "GOOGL" in symbol:
             initial_price = 140.0
+        elif "SET" in symbol:
+            initial_price = 1500.0
         else:
             initial_price = 100.0
         
-        # Generate realistic price movement (from test.py)
+        # สร้างราคาที่มี trend และ volatility (ใช้วิธีเดียวกับ test.py)
         np.random.seed(42)
         returns = np.random.normal(0.0005, 0.02, n_days)  # 0.05% daily return, 2% volatility
         prices = [initial_price]
@@ -202,7 +203,7 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
             new_price = prices[-1] * (1 + ret)
             prices.append(max(new_price, 0.01))  # ป้องกันราคาติดลบ
         
-        # Create OHLCV data (from test.py)
+        # สร้าง OHLCV data (ใช้วิธีเดียวกับ test.py)
         dummy_df = pd.DataFrame({
             'Open': [p * (1 + np.random.normal(0, 0.005)) for p in prices],
             'High': [p * (1 + abs(np.random.normal(0, 0.01))) for p in prices],
@@ -211,11 +212,18 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
             'Volume': np.random.randint(1000000, 10000000, n_days)
         }, index=dates)
         
-        # Adjust High/Low to be realistic (from test.py)
+        # ปรับ High/Low ให้สมเหตุสมผล (ใช้วิธีเดียวกับ test.py)
         dummy_df['High'] = dummy_df[['Open', 'Close']].max(axis=1) * (1 + np.random.uniform(0, 0.02, n_days))
         dummy_df['Low'] = dummy_df[['Open', 'Close']].min(axis=1) * (1 - np.random.uniform(0, 0.02, n_days))
         
         print(f"✅ สร้างข้อมูลจำลอง {symbol} สำเร็จ! ({len(dummy_df)} วัน)")
+        
+        # Convert timezone to Bangkok time
+        try:
+            dummy_df = dummy_df.tz_localize("UTC").tz_convert("Asia/Bangkok")
+        except:
+            print("⚠️ ไม่สามารถแปลง timezone ได้ ใช้เวลาปกติแทน")
+        
         return dummy_df
 
 def build_features(price: pd.DataFrame) -> pd.DataFrame:
@@ -272,13 +280,13 @@ def train_rf(Xtr, ytr, n_estimators=300, min_samples_leaf=1, random_state=42):
     return model
 
 # ---------------------- Evaluator ----------------------
-@dataclass
 class EvalReport:
-    passed: bool
-    mae: float
-    mae_naive: float
-    rel: float
-    reason: str
+    def __init__(self, passed: bool, mae: float, mae_naive: float, rel: float, reason: str):
+        self.passed = passed
+        self.mae = mae
+        self.mae_naive = mae_naive
+        self.rel = rel
+        self.reason = reason
 
 def evaluate_regression(y_true: np.ndarray, y_pred: np.ndarray, y_naive: np.ndarray, thresh=0.98) -> EvalReport:
     mae = mean_absolute_error(y_true, y_pred)
@@ -382,9 +390,149 @@ Write a short report-style rationale (5-7 bullet lines), Thai language preferred
     out = llm.chat(sys_p, user_p)
     return out or "ไม่สามารถสร้างถ้อยคำ rationale จาก LLM ได้"
 
+def generate_investment_report(context: dict) -> dict:
+    """Generate comprehensive investment report using LLM"""
+    llm = LLMClient()
+    
+    if not llm.available:
+        # Fallback report
+        return generate_fallback_report(context)
+    
+    # LLM-powered report
+    sys_p = """You are a senior investment analyst. Create a comprehensive investment report in Thai language.
+    Be professional, clear, and risk-aware. Focus on actionable insights."""
+    
+    user_p = f"""
+    Create an investment analysis report for {context['symbol']} with the following details:
+    
+    Investment Parameters:
+    - Symbol: {context['symbol']}
+    - Investment Period: {context['investment_years']} years
+    - Expected Return: {context['expected_return']}% per year
+    - Current Price: {context['current_price']}
+    
+    Analysis Results:
+    - Decision: {context['decision']}
+    - Model Performance: {context['metrics']}
+    - Technical Analysis: {context['rationale']}
+    
+    Please provide a structured report with these sections:
+    1. Executive Summary (สรุปผู้บริหาร)
+    2. Investment Recommendation (คำแนะนำการลงทุน)
+    3. Risk Assessment (การประเมินความเสี่ยง)
+    4. Technical Analysis (การวิเคราะห์ทางเทคนิค)
+    5. Outlook & Next Steps (แนวโน้มและขั้นตอนต่อไป)
+    6. Disclaimer (ข้อจำกัดความรับผิดชอบ)
+    
+    Write in Thai language, be concise but comprehensive.
+    """
+    
+    report_text = llm.chat(sys_p, user_p)
+    
+    if report_text:
+        return {
+            "executive_summary": extract_section(report_text, "Executive Summary", "สรุปผู้บริหาร"),
+            "recommendation": extract_section(report_text, "Investment Recommendation", "คำแนะนำการลงทุน"),
+            "risk_assessment": extract_section(report_text, "Risk Assessment", "การประเมินความเสี่ยง"),
+            "technical_analysis": extract_section(report_text, "Technical Analysis", "การวิเคราะห์ทางเทคนิค"),
+            "outlook": extract_section(report_text, "Outlook", "แนวโน้ม"),
+            "disclaimer": extract_section(report_text, "Disclaimer", "ข้อจำกัดความรับผิดชอบ"),
+            "full_report": report_text
+        }
+    else:
+        return generate_fallback_report(context)
+
+def extract_section(text: str, *keywords) -> str:
+    """Extract a specific section from report text"""
+    lines = text.split('\n')
+    section_lines = []
+    in_section = False
+    
+    for line in lines:
+        line = line.strip()
+        if any(keyword in line for keyword in keywords):
+            in_section = True
+            continue
+        elif in_section and (line.startswith('#') or line.startswith('##') or 
+                           any(k in line for k in ["Executive", "Investment", "Risk", "Technical", "Outlook", "Disclaimer"])):
+            break
+        elif in_section and line:
+            section_lines.append(line)
+    
+    return '\n'.join(section_lines) if section_lines else "ไม่พบข้อมูลในส่วนนี้"
+
+def generate_fallback_report(context: dict) -> dict:
+    """Generate fallback report when LLM is not available"""
+    symbol = context['symbol']
+    years = context['investment_years']
+    expected_return = context['expected_return']
+    decision = context['decision']
+    current_price = context['current_price']
+    
+    return {
+        "executive_summary": f"การวิเคราะห์หุ้น {symbol} สำหรับการลงทุนระยะเวลา {years} ปี โดยคาดหวังผลตอบแทน {expected_return}% ต่อปี",
+        "recommendation": f"คำแนะนำ: {decision} - ราคาปัจจุบัน {current_price}",
+        "risk_assessment": "ความเสี่ยง: ปัจจัยตลาด, ความผันผวน, สถานการณ์เศรษฐกิจ",
+        "technical_analysis": "การวิเคราะห์ทางเทคนิค: ใช้โมเดล Random Forest วิเคราะห์ข้อมูลราคาและปริมาณการซื้อขาย",
+        "outlook": f"แนวโน้ม: ติดตามผลการดำเนินงานและปัจจัยพื้นฐานของบริษัทในช่วง {years} ปีข้างหน้า",
+        "disclaimer": "ข้อจำกัด: การวิเคราะห์นี้เป็นข้อมูลเพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน",
+        "full_report": f"รายงานการวิเคราะห์ {symbol} - {decision} - ราคา {current_price}"
+    }
+
+def display_investment_report(report: dict, context: dict):
+    """Display the investment report in a beautiful format"""
+    
+    # Executive Summary
+    st.markdown("""
+    <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #00d4ff; margin: 0 0 1rem 0;">📋 Executive Summary</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("executive_summary", "ไม่พบข้อมูล"))
+    
+    # Investment Recommendation
+    st.markdown("""
+    <div style="background: rgba(0, 255, 0, 0.1); border: 1px solid #00ff00; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #00ff00; margin: 0 0 1rem 0;">🎯 Investment Recommendation</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("recommendation", "ไม่พบข้อมูล"))
+    
+    # Risk Assessment
+    st.markdown("""
+    <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid #ffa500; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #ffa500; margin: 0 0 1rem 0;">⚠️ Risk Assessment</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("risk_assessment", "ไม่พบข้อมูล"))
+    
+    # Technical Analysis
+    st.markdown("""
+    <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #00d4ff; margin: 0 0 1rem 0;">📊 Technical Analysis</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("technical_analysis", "ไม่พบข้อมูล"))
+    
+    # Outlook
+    st.markdown("""
+    <div style="background: rgba(128, 0, 128, 0.1); border: 1px solid #800080; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #800080; margin: 0 0 1rem 0;">🔮 Outlook & Next Steps</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("outlook", "ไม่พบข้อมูล"))
+    
+    # Disclaimer
+    st.markdown("""
+    <div style="background: rgba(128, 128, 128, 0.1); border: 1px solid #808080; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="color: #808080; margin: 0 0 1rem 0;">📝 Disclaimer</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(report.get("disclaimer", "ไม่พบข้อมูล"))
+
 # ---------------------- Agent with logging callbacks ----------------------
 class FinanceAgentLLM:
-    def __init__(self, max_loops=3, llm_model="gpt-4o-mini", logger: Callable[[str, Dict[str, Any]], None]=None):
+    def __init__(self, max_loops=10, llm_model="gpt-4o-mini", logger: Callable[[str, Dict[str, Any]], None]=None):
         self.max_loops = max_loops
         self.short: Dict[str, Any] = {}
         self.long: Dict[str, Any] = {}
@@ -811,224 +959,172 @@ st.markdown("""
 with st.sidebar:
     st.markdown("""
     <div style="text-align: center; margin-bottom: 2rem;">
-        <h2>🚀 Mission Control</h2>
-        <p style="color: #00d4ff; font-size: 0.9rem;">Configure your space mission</p>
+        <h2>🚀 Investment Analysis</h2>
+        <p style="color: #00d4ff; font-size: 0.9rem;">Simple & Powerful</p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("### 🌟 Target Selection")
-    
-    # Predefined symbols that work well
-    symbol_options = {
-        "🌍 Global Stocks": {
-            "AAPL": "Apple Inc.",
-            "MSFT": "Microsoft Corp.",
-            "GOOGL": "Google (Alphabet)",
-            "TSLA": "Tesla Inc.",
-            "AMZN": "Amazon.com Inc."
-        },
-        "🇹🇭 Thai Market": {
-            "^SETI": "SET Index",
-            "^SET50": "SET50 Index",
-            "PTT.BK": "PTT Public Company",
-            "DELTA.BK": "Delta Electronics Thailand"
-        },
-        "🏦 Financial": {
-            "JPM": "JPMorgan Chase",
-            "BAC": "Bank of America",
-            "WFC": "Wells Fargo"
-        }
-    }
-    
-    # Create selectbox for symbol selection
-    symbol_choice = st.selectbox(
-        "🎯 Choose Symbol",
-        options=list(symbol_options.keys()),
-        help="Select a category to see available symbols"
+    # 1. Symbol Input
+    st.markdown("### 🎯 Symbol")
+    symbol = st.text_input(
+        "Stock Symbol", 
+        value="PTT.BK", 
+        help="Enter stock symbol (e.g., PTT.BK, AAPL, ^SETI)",
+        placeholder="PTT.BK"
     )
     
-    if symbol_choice:
-        selected_symbol = st.selectbox(
-            "📊 Select Specific Symbol",
-            options=list(symbol_options[symbol_choice].keys()),
-            format_func=lambda x: f"{x} - {symbol_options[symbol_choice][x]}",
-            help="Choose a specific symbol from the selected category"
-        )
-        symbol = selected_symbol
-    else:
-        symbol = st.text_input("🎯 Custom Symbol", value="AAPL", help="Enter any valid Yahoo Finance symbol")
+    # 2. Investment Period (Years)
+    st.markdown("### ⏰ Investment Period")
+    investment_years = st.selectbox(
+        "Years to Invest", 
+        options=[1, 2, 3, 5, 10], 
+        index=2,
+        help="How long do you plan to hold this investment?"
+    )
     
-    st.markdown("### ⏰ Time Parameters")
-    horizon = st.selectbox("🔮 Horizon (days forward return)", options=[5,10,20], index=0)
-    period = st.selectbox("📅 Download period", options=["2y","3y","5y"], index=0)
-    
-    st.markdown("### 🎛️ Mission Settings")
-    rel_thresh = st.slider("🎯 rel threshold (MAE/MAE_naive)", min_value=0.90, max_value=1.10, value=0.98, step=0.01)
-    max_loops = st.slider("🔄 Max loops", 1, 5, 3)
-    
-    st.markdown("### 🔧 Technical Indicators")
-    use_rsi = st.checkbox("📊 Use RSI", value=True)
-    use_vol = st.checkbox("📈 Use Volume Z-score", value=True)
+    # 3. Expected Annual Return
+    st.markdown("### 📈 Expected Annual Return")
+    expected_return = st.slider(
+        "Expected Return (%)", 
+        min_value=5.0, 
+        max_value=25.0, 
+        value=12.0, 
+        step=0.5,
+        help="Your target annual return percentage"
+    )
     
     st.markdown("---")
     
     # Quick Price Preview
-    st.markdown("### 💰 Quick Price Preview")
-    try:
-        # Try to get real data first
-        from datetime import datetime, timedelta
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=5)
-        
+    if symbol:
+        st.markdown("### 💰 Current Price")
         try:
-            # Try real Yahoo Finance data
-            real_df = yf.download(symbol, start=start_date.strftime("%Y-%m-%d"), 
-                                end=end_date.strftime("%Y-%m-%d"), 
-                                interval="1d", auto_adjust=True, progress=False)
-            
-            if real_df is not None and not real_df.empty:
-                # Don't rename columns - keep original Yahoo Finance format
-                real_df = real_df.dropna()
-                
-                if len(real_df) > 0:
-                    # Handle MultiIndex columns from Yahoo Finance
-                    if isinstance(real_df.columns, pd.MultiIndex):
-                        close_col = real_df.columns[0]  # First column is usually Close
-                    else:
-                        close_col = "Close" if "Close" in real_df.columns else "close"
-                    
-                    latest_price = float(real_df[close_col].iloc[-1])
-                    prev_price = float(real_df[close_col].iloc[-2]) if len(real_df) > 1 else latest_price
-                    price_change = latest_price - prev_price
-                    price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
-                    
-                    change_color = "#00ff00" if price_change >= 0 else "#ff0000"
-                    change_icon = "📈" if price_change >= 0 else "📉"
+            with st.spinner("Fetching price..."):
+                preview_df = fetch_price(symbol, "5d", "1d")
+                if not preview_df.empty:
+                    latest_price = preview_df['Close'].iloc[-1]
+                    prev_price = preview_df['Close'].iloc[-2] if len(preview_df) > 1 else latest_price
+                    change = latest_price - prev_price
+                    change_pct = (change / prev_price) * 100 if prev_price != 0 else 0
                     
                     st.markdown(f"""
-                    <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; border-radius: 10px; padding: 1rem; margin: 0.5rem 0;">
-                        <h4 style="color: #00d4ff; margin: 0 0 0.5rem 0;">{symbol} (Real Data)</h4>
-                        <h3 style="color: #ffffff; margin: 0 0 0.5rem 0;">{latest_price:.2f}</h3>
-                        <p style="color: {change_color}; margin: 0; font-weight: bold;">
-                            {change_icon} {price_change:+.2f} ({price_change_pct:+.2f}%)
+                    <div style="background: rgba(0, 212, 255, 0.1); padding: 1rem; border-radius: 10px; border: 1px solid #00d4ff;">
+                        <h4 style="color: #00d4ff; margin: 0;">{symbol}</h4>
+                        <h3 style="color: #ffffff; margin: 0.5rem 0;">${latest_price:.2f}</h3>
+                        <p style="color: {'#00ff88' if change >= 0 else '#ff6b6b'}; margin: 0;">
+                            {change:+.2f} ({change_pct:+.2f}%)
                         </p>
-                        <p style="color: #00d4ff; margin: 0; font-size: 0.8rem;">✅ Live Data</p>
+                        <p style="color: #888; font-size: 0.8rem; margin: 0.5rem 0 0 0;">
+                            🎭 Demo Data
+                        </p>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    raise ValueError("No real data")
-            else:
-                raise ValueError("No real data")
-                
-        except Exception:
-            # Fallback to dummy data with warning
-            preview_df = fetch_price(symbol, period="5d", interval="1d")
-            if preview_df is not None and not preview_df.empty:
-                # Handle MultiIndex columns from Yahoo Finance
-                if isinstance(preview_df.columns, pd.MultiIndex):
-                    close_col = preview_df.columns[0]  # First column is usually Close
-                else:
-                    close_col = "Close" if "Close" in preview_df.columns else "close"
-                
-                latest_price = float(preview_df[close_col].iloc[-1])
-                prev_price = float(preview_df[close_col].iloc[-2]) if len(preview_df) > 1 else latest_price
-                price_change = latest_price - prev_price
-                price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
-                
-                change_color = "#ffa500"  # Orange for demo data
-                change_icon = "📈" if price_change >= 0 else "📉"
-                
-                st.markdown(f"""
-                <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid #ffa500; border-radius: 10px; padding: 1rem; margin: 0.5rem 0;">
-                    <h4 style="color: #ffa500; margin: 0 0 0.5rem 0;">{symbol} (Demo Data)</h4>
-                    <h3 style="color: #ffffff; margin: 0 0 0.5rem 0;">{latest_price:.2f}</h3>
-                    <p style="color: {change_color}; margin: 0; font-weight: bold;">
-                        {change_icon} {price_change:+.2f} ({price_change_pct:+.2f}%)
-                    </p>
-                    <p style="color: #ffa500; margin: 0; font-size: 0.8rem;">⚠️ Demo Data (API Offline)</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; border-radius: 10px; padding: 0.5rem; margin: 0.5rem 0;">
-                    <p style="color: #ff0000; margin: 0; font-size: 0.9rem;">❌ No price data available</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-    except Exception as e:
-        st.markdown("""
-        <div style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; border-radius: 10px; padding: 0.5rem; margin: 0.5rem 0;">
-            <p style="color: #ff0000; margin: 0; font-size: 0.9rem;">❌ Price preview unavailable</p>
-        </div>
-        """, unsafe_allow_html=True)
+                    st.warning("⚠️ Unable to fetch price data")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
     
-    # API Status Check
-    st.markdown("### 🔗 API Status")
-    try:
-        # Quick test of Yahoo Finance API
-        test_df = yf.download("AAPL", period="5d", progress=False)
-        if test_df is not None and not test_df.empty:
-            st.markdown("""
-            <div style="background: rgba(0, 255, 0, 0.1); border: 1px solid #00ff00; border-radius: 10px; padding: 0.5rem; margin: 0.5rem 0;">
-                <p style="color: #00ff00; margin: 0; font-size: 0.9rem;">✅ Yahoo Finance API: Connected</p>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid #ffa500; border-radius: 10px; padding: 0.5rem; margin: 0.5rem 0;">
-                <p style="color: #ffa500; margin: 0; font-size: 0.9rem;">⚠️ Yahoo Finance API: Limited</p>
-            </div>
-            """, unsafe_allow_html=True)
-    except:
-        st.markdown("""
-        <div style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; border-radius: 10px; padding: 0.5rem; margin: 0.5rem 0;">
-            <p style="color: #ff0000; margin: 0; font-size: 0.9rem;">❌ Yahoo Finance API: Offline</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("---")
     
-    run_btn = st.button("🚀 Launch Mission", use_container_width=True, key="launch_mission")
+    # Run Analysis Button
+    run_btn = st.button("🚀 Run Analysis", use_container_width=True, key="run_analysis")
     
     # Add glow effect to the button
     if run_btn:
         st.markdown("""
         <style>
-        .stButton > button[key="launch_mission"] {
+        .stButton > button[key="run_analysis"] {
             animation: pulse 1s ease-in-out infinite alternate;
         }
         </style>
         """, unsafe_allow_html=True)
 
-# Main content layout with space theme
-st.markdown("""
-<div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 15px; padding: 1rem; margin: 1rem 0; backdrop-filter: blur(10px);">
-    <h3 style="color: #00d4ff; text-align: center; margin-bottom: 1rem;">🌌 Mission Dashboard</h3>
-</div>
-""", unsafe_allow_html=True)
-
-col1, col2 = st.columns([2,1])
-
-with col1:
+# Main content layout - Simple Report View
+if run_btn:
+    # Hardcoded parameters
+    plan_type = "comprehensive_analysis"
+    model_type = "random_forest"
+    horizon = 5  # Fixed
+    period_map = {1: "1y", 2: "2y", 3: "2y", 5: "3y", 10: "5y"}
+    period = period_map.get(investment_years, "2y")
+    rel_thresh = 0.98
+    max_loops = 10
+    use_rsi = True
+    use_vol = True
+    
+    # Create goal for agent
+    goal = {
+        "symbol": symbol, 
+        "horizon": horizon, 
+        "period": period, 
+        "rel_thresh": float(rel_thresh),
+        "investment_years": investment_years,
+        "expected_return": expected_return
+    }
+    
+    # Run analysis with progress
+    with st.spinner("🔄 Running comprehensive analysis..."):
+        try:
+            # Initialize agent
+            agent = FinanceAgentLLM(max_loops=max_loops)
+            agent.short["use_rsi"] = use_rsi
+            agent.short["use_vol"] = use_vol
+            
+            # Run analysis
+            summary = agent.run(goal)
+            
+            # Generate LLM Report
+            if summary:
+                # Create report context
+                report_context = {
+                    "symbol": symbol,
+                    "investment_years": investment_years,
+                    "expected_return": expected_return,
+                    "metrics": summary.get("metrics", {}),
+                    "decision": summary.get("decision", "HOLD"),
+                    "rationale": summary.get("rationale_text", ""),
+                    "current_price": "N/A"  # Will be filled from price data
+                }
+                
+                # Get current price for report
+                try:
+                    price_df = fetch_price(symbol, period, "1d")
+                    if not price_df.empty:
+                        report_context["current_price"] = f"${price_df['Close'].iloc[-1]:.2f}"
+                except:
+                    pass
+                
+                # Generate comprehensive report
+                report = generate_investment_report(report_context)
+                
+                # Display Report
+                st.markdown("""
+                <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 15px; padding: 1rem; margin: 1rem 0; backdrop-filter: blur(10px);">
+                    <h3 style="color: #00d4ff; text-align: center; margin-bottom: 1rem;">📊 Investment Analysis Report</h3>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display report sections
+                display_investment_report(report, report_context)
+                
+            else:
+                st.error("❌ Analysis failed to produce results")
+                
+        except Exception as e:
+            st.error(f"❌ Analysis error: {e}")
+else:
+    # Welcome message
     st.markdown("""
-    <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 15px; padding: 1rem; margin: 1rem 0; backdrop-filter: blur(10px);">
-        <h4 style="color: #00d4ff; text-align: center;">📡 Real-time Mission Log</h4>
+    <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; border-radius: 15px; padding: 2rem; margin: 2rem 0; text-align: center;">
+        <h4 style="color: #00d4ff; margin-bottom: 1rem;">🚀 Ready for Analysis</h4>
+        <p style="color: #ffffff; font-size: 1.1rem;">
+            Configure your investment parameters in the sidebar, then click <strong style="color: #00d4ff;">🚀 Run Analysis</strong> to get a comprehensive investment report!
+        </p>
+        <p style="color: #00d4ff; font-size: 0.9rem; margin-top: 1rem;">
+            📈 AI-powered analysis • Risk assessment • Investment recommendation 📈
+        </p>
     </div>
     """, unsafe_allow_html=True)
-    log_container = st.container()
-
-with col2:
-    st.markdown("""
-    <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 15px; padding: 1rem; margin: 1rem 0; backdrop-filter: blur(10px);">
-        <h4 style="color: #00d4ff; text-align: center;">🎯 Mission Summary</h4>
-    </div>
-    """, unsafe_allow_html=True)
-    summary_container = st.container()
-
-st.markdown("""
-<div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 15px; padding: 1rem; margin: 1rem 0; backdrop-filter: blur(10px);">
-    <h4 style="color: #00d4ff; text-align: center;">📊 Market Data Visualization</h4>
-</div>
-""", unsafe_allow_html=True)
-price_chart_container = st.container()
 
 st.markdown("""
 <hr style="border: none; height: 2px; background: linear-gradient(90deg, transparent, #00d4ff, transparent); margin: 2rem 0;">
@@ -1067,41 +1163,14 @@ if run_btn:
         with price_chart_container:
             st.markdown("### 📊 Price Chart (Close)")
             
-            # Try to get real data first
-            try:
-                from datetime import datetime, timedelta
-                end_date = datetime.now()
-                if period == "2y":
-                    start_date = end_date - timedelta(days=730)
-                elif period == "3y":
-                    start_date = end_date - timedelta(days=1095)
-                elif period == "5y":
-                    start_date = end_date - timedelta(days=1825)
-                else:
-                    start_date = end_date - timedelta(days=730)
-                
-                # Try real Yahoo Finance data
-                real_df = yf.download(symbol, start=start_date.strftime("%Y-%m-%d"), 
-                                    end=end_date.strftime("%Y-%m-%d"), 
-                                    interval="1d", auto_adjust=True, progress=False)
-                
-                if real_df is not None and not real_df.empty:
-                    # Don't rename columns - keep original Yahoo Finance format
-                    real_df = real_df.dropna()
-                    
-                    if len(real_df) > 0:
-                        # Use real data
-                        price_df = real_df
-                        data_type = "Real Data"
-                        data_color = "#00ff00"
-                        data_icon = "✅"
-                    else:
-                        raise ValueError("No real data")
-                else:
-                    raise ValueError("No real data")
-                    
-            except Exception:
-                # Use dummy data
+            # ใช้วิธีเดียวกับ test.py
+            price_df = fetch_price(symbol, period, "1d")
+            
+            if not price_df.empty:
+                data_type = "Demo Data"  # เนื่องจากใช้ fallback เป็นหลัก
+                data_color = "#ffa500"
+                data_icon = "⚠️"
+            else:
                 data_type = "Demo Data"
                 data_color = "#ffa500"
                 data_icon = "⚠️"
