@@ -2,6 +2,7 @@
 .venv/
 venv/
 env/
+ENV/
 
 # Python
 __pycache__/
@@ -30,13 +31,23 @@ wheels/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
+logs/
+agent_logs.json
+*.log.*
 
 # Environment variables
 .env
@@ -44,13 +55,87 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+*.ipynb
 
 # Streamlit
 .streamlit/
+.streamlit_cache/
 
-# Test files
+# Finance Agent Specific
+agent_storage/
+test_storage/
+*.csv
+*.json
+!requirements.txt
+!settings.py
+!env_template.txt
+!env_config.py
+!README.md
+!*.md
+
+# Test files and reports
 test_*.py
 *_test.py
+test_*.json
+*_test_report*.json
+final_test_report*.json
+final_comprehensive_test*.json
+
+# Data files
+PTT_BK_daily.csv
+data/
+datasets/
+*.xlsx
+*.xls
+
+# App files (keep main apps, ignore demos)
+!app_streamlit_enhanced.py
+!app_streamlit_news.py
+!quick_start_streamlit.py
+demo_*.py
+
+# Model files
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+models/
+checkpoints/
+
+# Cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation build
+docs/_build/
+site/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# API keys and secrets
+secrets.json
+config.json
+credentials.json
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS generated files
+.DS_Store?
+Icon?
+
+# Specific files to ignore
+float
+"t changes and enhancements"

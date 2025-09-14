@@ -901,7 +901,15 @@ Task Result: {json.dumps(task_result, default=str, ensure_ascii=False)}
             result = self.tools['model_ops'].train_model(X, y, model_type, **model_params)
             
             if result.success:
-                self.memory['short_term'].store("trained_model", result.data, result.metadata)
+                # Store model data in the format expected by evaluation
+                model_data = {
+                    'model': result.data['model'],
+                    'scaler': result.data['scaler'],
+                    'y_test': result.data['y_test'],
+                    'y_pred': result.data['y_pred'],
+                    'X_test': result.data['X_test']
+                }
+                self.memory['short_term'].store("trained_model", model_data, result.metadata)
                 return {
                     "success": True,
                     "model": result.data,
@@ -922,6 +930,10 @@ Task Result: {json.dumps(task_result, default=str, ensure_ascii=False)}
             model_data = self.memory['short_term'].retrieve("trained_model")
             if model_data is None:
                 return {"success": False, "error": "No trained model available for evaluation"}
+            
+            # Check if required data exists
+            if 'y_test' not in model_data or 'y_pred' not in model_data:
+                return {"success": False, "error": "Missing y_test or y_pred in model data"}
             
             # Extract test data and predictions
             y_test = model_data['y_test']
@@ -947,6 +959,11 @@ Task Result: {json.dumps(task_result, default=str, ensure_ascii=False)}
             }
             
         except Exception as e:
+            self.log("ERROR", f"Model evaluation failed: {str(e)}", {
+                "task_id": task.id,
+                "error": str(e),
+                "model_data_keys": list(model_data.keys()) if model_data else "None"
+            })
             return {"success": False, "error": str(e)}
     
     def _execute_parameter_tuning(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:

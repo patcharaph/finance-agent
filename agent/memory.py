@@ -364,6 +364,26 @@ class LongTermMemory:
         relevant.sort(key=lambda x: (x.confidence, x.timestamp), reverse=True)
         return relevant[:limit]
     
+    def get_lessons(self, lesson_type: str = None, limit: int = 10) -> List[LessonEntry]:
+        """
+        Get lessons by type
+        
+        Args:
+            lesson_type: Filter by lesson type (optional)
+            limit: Maximum number of lessons to return
+        
+        Returns:
+            List of lessons
+        """
+        if lesson_type:
+            filtered = [lesson for lesson in self.lessons if lesson.lesson_type == lesson_type]
+        else:
+            filtered = self.lessons
+        
+        # Sort by confidence and recency
+        filtered.sort(key=lambda x: (x.confidence, x.timestamp), reverse=True)
+        return filtered[:limit]
+    
     def get_pattern(self, pattern_name: str) -> Optional[Dict[str, Any]]:
         """Get a stored pattern"""
         return self.patterns.get(pattern_name)
