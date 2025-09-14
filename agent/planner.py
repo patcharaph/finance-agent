@@ -247,7 +247,7 @@ PLAN_SCHEMA:
                     plan_data = json.loads(response)
                     
                     # Convert LLM plan to our task structure
-                    tasks = []
+                tasks = []
                     decision = plan_data.get('decision', 'SINGLE_STOCK')
                     targets = plan_data.get('targets', ['PTT.BK'])
                     subtasks = plan_data.get('subtasks', [])
@@ -280,24 +280,24 @@ PLAN_SCHEMA:
                         
                         # Map tool names to task types
                         task_type = self._map_tool_to_task_type(tool)
-                        
-                        task = Task(
+                    
+                    task = Task(
                             id=task_id,
-                            task_type=task_type,
+                        task_type=task_type,
                             description=subtask.get('id', f"Execute {tool}"),
                             parameters=args,
                             dependencies=[f"{plan_id}_task_1"] if i == 0 else [f"{plan_id}_task_{i+1}"],
                             estimated_duration=30.0,
                             priority=i+2
-                        )
-                        tasks.append(task)
-                    
-                    return Plan(
-                        id=plan_id,
-                        goal=goal,
-                        tasks=tasks,
-                        created_at=time.time(),
-                        updated_at=time.time(),
+                    )
+                    tasks.append(task)
+                
+                return Plan(
+                    id=plan_id,
+                    goal=goal,
+                    tasks=tasks,
+                    created_at=time.time(),
+                    updated_at=time.time(),
                         metadata={
                             **context,
                             "llm_decision": decision,

@@ -506,7 +506,7 @@ class FinanceAgent:
                             "criteria": acceptance_criteria,
                             "evaluation": evaluation_result
                         })
-                        return False
+                    return False
             
             # Check confidence threshold
             confidence = evaluation_result.get('confidence', 0.0)
@@ -646,7 +646,7 @@ Output JSON (STRICT):
                 what_failed.append(f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold})")
             if metrics.get('rel_performance', 1.0) > 0.98:
                 what_failed.append("Model worse than naive baseline")
-            
+
             user_prompt = f"""
 GOAL: {goal}
 PLAN: {json.dumps(plan_metadata, ensure_ascii=False)}

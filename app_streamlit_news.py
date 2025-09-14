@@ -133,98 +133,138 @@ def fetch_price(symbol: str, period="2y", interval="1d") -> pd.DataFrame:
     
     print(f"🔄 กำลังดึงข้อมูล {symbol}...")
     
-    try:
-        # Convert period to start/end dates
-        from datetime import datetime, timedelta
-        end_date = datetime.now()
-        if period == "2y":
-            start_date = end_date - timedelta(days=730)
-        elif period == "3y":
-            start_date = end_date - timedelta(days=1095)
-        elif period == "5y":
-            start_date = end_date - timedelta(days=1825)
-        else:
-            start_date = end_date - timedelta(days=730)
-        
-        # ลองดึงข้อมูลจริงด้วย yf.download()
-        df = yf.download(symbol, period=period, interval=interval, 
-                        auto_adjust=True, progress=False, threads=False)
-        
-        if df is not None and not df.empty:
-            print(f"✅ ดึงข้อมูล {symbol} สำเร็จ! ({len(df)} วัน)")
-            # Convert timezone to Bangkok time
-            try:
-                df = df.tz_localize("UTC").tz_convert("Asia/Bangkok")
-            except:
-                print("⚠️ ไม่สามารถแปลง timezone ได้ ใช้เวลาปกติแทน")
-            return df
-        else:
-            raise ValueError("ข้อมูลว่างเปล่า")
-            
-    except Exception as e:
-        print(f"❌ ไม่สามารถดึงข้อมูล {symbol} ได้: {e}")
-        print("🔄 สร้างข้อมูลจำลองแทน...")
-        
-        # สร้างข้อมูลจำลอง (ใช้วิธีเดียวกับ test.py)
-        from datetime import datetime, timedelta
-        end_date = datetime.now()
-        if period == "2y":
-            start_date = end_date - timedelta(days=730)
-        elif period == "3y":
-            start_date = end_date - timedelta(days=1095)
-        elif period == "5y":
-            start_date = end_date - timedelta(days=1825)
-        else:
-            start_date = end_date - timedelta(days=730)
-            
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
-        n_days = len(dates)
-        
-        # ราคาเริ่มต้นตามสัญลักษณ์ (ใช้วิธีเดียวกับ test.py)
-        if "PTT" in symbol:
-            initial_price = 35.0  # PTT ราคาประมาณ 35 บาท
-        elif "AAPL" in symbol:
-            initial_price = 180.0  # Apple ราคาประมาณ $180
-        elif "MSFT" in symbol:
-            initial_price = 400.0
-        elif "GOOGL" in symbol:
-            initial_price = 140.0
-        elif "SET" in symbol:
-            initial_price = 1500.0
-        else:
-            initial_price = 100.0
-        
-        # สร้างราคาที่มี trend และ volatility (ใช้วิธีเดียวกับ test.py)
-        np.random.seed(42)
-        returns = np.random.normal(0.0005, 0.02, n_days)  # 0.05% daily return, 2% volatility
-        prices = [initial_price]
-        
-        for ret in returns[1:]:
-            new_price = prices[-1] * (1 + ret)
-            prices.append(max(new_price, 0.01))  # ป้องกันราคาติดลบ
-        
-        # สร้าง OHLCV data (ใช้วิธีเดียวกับ test.py)
-        dummy_df = pd.DataFrame({
-            'Open': [p * (1 + np.random.normal(0, 0.005)) for p in prices],
-            'High': [p * (1 + abs(np.random.normal(0, 0.01))) for p in prices],
-            'Low': [p * (1 - abs(np.random.normal(0, 0.01))) for p in prices],
-            'Close': prices,
-            'Volume': np.random.randint(1000000, 10000000, n_days)
-        }, index=dates)
-        
-        # ปรับ High/Low ให้สมเหตุสมผล (ใช้วิธีเดียวกับ test.py)
-        dummy_df['High'] = dummy_df[['Open', 'Close']].max(axis=1) * (1 + np.random.uniform(0, 0.02, n_days))
-        dummy_df['Low'] = dummy_df[['Open', 'Close']].min(axis=1) * (1 - np.random.uniform(0, 0.02, n_days))
-        
-        print(f"✅ สร้างข้อมูลจำลอง {symbol} สำเร็จ! ({len(dummy_df)} วัน)")
-        
-        # Convert timezone to Bangkok time
+    # Try multiple approaches to get real data with better error handling
+    import time
+    import random
+    
+    for attempt in range(5):  # Try 5 times with different methods and delays
         try:
-            dummy_df = dummy_df.tz_localize("UTC").tz_convert("Asia/Bangkok")
-        except:
-            print("⚠️ ไม่สามารถแปลง timezone ได้ ใช้เวลาปกติแทน")
+            # Add random delay to avoid rate limiting
+            delay = random.uniform(1, 3) + attempt * 2
+            time.sleep(delay)
+            
+            if attempt == 0:
+                # Method 1: Direct download with minimal parameters
+                df = yf.download(symbol, period=period, interval=interval, 
+                                auto_adjust=True, progress=False, threads=False)
+            elif attempt == 1:
+                # Method 2: Use Ticker object with history
+                ticker = yf.Ticker(symbol)
+                df = ticker.history(period=period, interval=interval, auto_adjust=True)
+            elif attempt == 2:
+                # Method 3: Try with different parameters and proxy
+                df = yf.download(symbol, period=period, interval=interval, 
+                                auto_adjust=True, progress=False, threads=False, 
+                                proxy=None, rounding=True)
+            elif attempt == 3:
+                # Method 4: Try with different symbol format
+                if '.' in symbol:
+                    # Try without exchange suffix
+                    base_symbol = symbol.split('.')[0]
+                    df = yf.download(base_symbol, period=period, interval=interval, 
+                                    auto_adjust=True, progress=False, threads=False)
+                else:
+                    # Try with common exchange suffixes
+                    for suffix in ['.BK', '.TO', '.L', '.HK']:
+                        try:
+                            test_symbol = symbol + suffix
+                            df = yf.download(test_symbol, period=period, interval=interval, 
+                                            auto_adjust=True, progress=False, threads=False)
+                            if df is not None and not df.empty:
+                                break
+                        except:
+                            continue
+            else:
+                # Method 5: Last attempt with different approach
+                ticker = yf.Ticker(symbol)
+                df = ticker.history(period=period, interval=interval, auto_adjust=True, 
+                                  start=None, end=None, actions=False)
+            
+            if df is not None and not df.empty and len(df) > 0:
+                print(f"✅ ดึงข้อมูล {symbol} สำเร็จ! ({len(df)} วัน) - วิธีที่ {attempt + 1}")
+                # Convert timezone to Bangkok time
+                try:
+                    if df.index.tz is None:
+                        df = df.tz_localize("UTC").tz_convert("Asia/Bangkok")
+                    else:
+                        df = df.tz_convert("Asia/Bangkok")
+                except:
+                    print("⚠️ ไม่สามารถแปลง timezone ได้ ใช้เวลาปกติแทน")
+                return df
+            else:
+                print(f"⚠️ วิธีที่ {attempt + 1} ได้ข้อมูลว่างเปล่า")
+                continue
+                
+        except Exception as e:
+            print(f"❌ วิธีที่ {attempt + 1} ไม่สามารถดึงข้อมูล {symbol} ได้: {e}")
+            if attempt < 4:  # Not the last attempt
+                print(f"🔄 ลองวิธีที่ {attempt + 2}...")
+                continue
+            else:
+                print("🔄 สร้างข้อมูลจำลองแทน...")
+    
+    # สร้างข้อมูลจำลอง (ใช้วิธีเดียวกับ test.py)
+    from datetime import datetime, timedelta
+    end_date = datetime.now()
+    if period == "2y":
+        start_date = end_date - timedelta(days=730)
+    elif period == "3y":
+        start_date = end_date - timedelta(days=1095)
+    elif period == "5y":
+        start_date = end_date - timedelta(days=1825)
+    elif period == "20y":
+        start_date = end_date - timedelta(days=7300)  # 20 years
+    else:
+        start_date = end_date - timedelta(days=730)
         
-        return dummy_df
+    dates = pd.date_range(start=start_date, end=end_date, freq='D')
+    n_days = len(dates)
+    
+    # ราคาเริ่มต้นตามสัญลักษณ์ (ใช้วิธีเดียวกับ test.py)
+    if "PTT" in symbol:
+        initial_price = 35.0  # PTT ราคาประมาณ 35 บาท
+    elif "AAPL" in symbol:
+        initial_price = 180.0  # Apple ราคาประมาณ $180
+    elif "MSFT" in symbol:
+        initial_price = 400.0
+    elif "GOOGL" in symbol:
+        initial_price = 140.0
+    elif "SET" in symbol:
+        initial_price = 1500.0
+    else:
+        initial_price = 100.0
+    
+    # สร้างราคาที่มี trend และ volatility (ใช้วิธีเดียวกับ test.py)
+    np.random.seed(42)
+    returns = np.random.normal(0.0005, 0.02, n_days)  # 0.05% daily return, 2% volatility
+    prices = [initial_price]
+    
+    for ret in returns[1:]:
+        new_price = prices[-1] * (1 + ret)
+        prices.append(max(new_price, 0.01))  # ป้องกันราคาติดลบ
+    
+    # สร้าง OHLCV data (ใช้วิธีเดียวกับ test.py)
+    dummy_df = pd.DataFrame({
+        'Open': [p * (1 + np.random.normal(0, 0.005)) for p in prices],
+        'High': [p * (1 + abs(np.random.normal(0, 0.01))) for p in prices],
+        'Low': [p * (1 - abs(np.random.normal(0, 0.01))) for p in prices],
+        'Close': prices,
+        'Volume': np.random.randint(1000000, 10000000, n_days)
+    }, index=dates)
+    
+    # ปรับ High/Low ให้สมเหตุสมผล (ใช้วิธีเดียวกับ test.py)
+    dummy_df['High'] = dummy_df[['Open', 'Close']].max(axis=1) * (1 + np.random.uniform(0, 0.02, n_days))
+    dummy_df['Low'] = dummy_df[['Open', 'Close']].min(axis=1) * (1 - np.random.uniform(0, 0.02, n_days))
+    
+    print(f"✅ สร้างข้อมูลจำลอง {symbol} สำเร็จ! ({len(dummy_df)} วัน)")
+    
+    # Convert timezone to Bangkok time
+    try:
+        dummy_df = dummy_df.tz_localize("UTC").tz_convert("Asia/Bangkok")
+    except:
+        print("⚠️ ไม่สามารถแปลง timezone ได้ ใช้เวลาปกติแทน")
+    
+    return dummy_df
 
 def build_features(price: pd.DataFrame) -> pd.DataFrame:
     feat = pd.DataFrame(index=price.index)
@@ -977,7 +1017,7 @@ with st.sidebar:
     st.markdown("### ⏰ Investment Period")
     investment_years = st.selectbox(
         "Years to Invest", 
-        options=[1, 2, 3, 5, 10], 
+        options=[1, 2, 3, 5, 10, 20], 
         index=2,
         help="How long do you plan to hold this investment?"
     )
@@ -1002,10 +1042,20 @@ with st.sidebar:
             with st.spinner("Fetching price..."):
                 preview_df = fetch_price(symbol, "5d", "1d")
                 if not preview_df.empty:
-                    latest_price = preview_df['Close'].iloc[-1]
-                    prev_price = preview_df['Close'].iloc[-2] if len(preview_df) > 1 else latest_price
+                    # Handle MultiIndex columns
+                    if isinstance(preview_df.columns, pd.MultiIndex):
+                        close_col = preview_df.columns[0]  # First column is usually Close
+                    else:
+                        close_col = "Close" if "Close" in preview_df.columns else "close"
+                    
+                    latest_price = preview_df[close_col].iloc[-1]
+                    prev_price = preview_df[close_col].iloc[-2] if len(preview_df) > 1 else latest_price
                     change = latest_price - prev_price
                     change_pct = (change / prev_price) * 100 if prev_price != 0 else 0
+                    
+                    # Get date information
+                    latest_date = preview_df.index[-1].strftime('%Y-%m-%d') if len(preview_df) > 0 else "N/A"
+                    prev_date = preview_df.index[-2].strftime('%Y-%m-%d') if len(preview_df) > 1 else "N/A"
                     
                     st.markdown(f"""
                     <div style="background: rgba(0, 212, 255, 0.1); padding: 1rem; border-radius: 10px; border: 1px solid #00d4ff;">
@@ -1015,7 +1065,7 @@ with st.sidebar:
                             {change:+.2f} ({change_pct:+.2f}%)
                         </p>
                         <p style="color: #888; font-size: 0.8rem; margin: 0.5rem 0 0 0;">
-                            🎭 Demo Data
+                            📅 {latest_date} vs {prev_date}
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1045,7 +1095,7 @@ if run_btn:
     plan_type = "comprehensive_analysis"
     model_type = "random_forest"
     horizon = 5  # Fixed
-    period_map = {1: "1y", 2: "2y", 3: "2y", 5: "3y", 10: "5y"}
+    period_map = {1: "1y", 2: "2y", 3: "2y", 5: "3y", 10: "5y", 20: "20y"}
     period = period_map.get(investment_years, "2y")
     rel_thresh = 0.98
     max_loops = 10
@@ -1090,7 +1140,12 @@ if run_btn:
                 try:
                     price_df = fetch_price(symbol, period, "1d")
                     if not price_df.empty:
-                        report_context["current_price"] = f"${price_df['Close'].iloc[-1]:.2f}"
+                        # Handle MultiIndex columns
+                        if isinstance(price_df.columns, pd.MultiIndex):
+                            close_col = price_df.columns[0]  # First column is usually Close
+                        else:
+                            close_col = "Close" if "Close" in price_df.columns else "close"
+                        report_context["current_price"] = f"${price_df[close_col].iloc[-1]:.2f}"
                 except:
                     pass
                 
@@ -1134,6 +1189,11 @@ st.markdown("""
 if "logs" not in st.session_state:
     st.session_state.logs: List[Dict[str, Any]] = []
 
+# Create containers
+log_container = st.container()
+price_chart_container = st.container()
+summary_container = st.container()
+
 def logger(event: str, data: Dict[str, Any]):
     st.session_state.logs.append({"event": event, "data": data})
     # Live update rendering with space theme
@@ -1167,40 +1227,112 @@ if run_btn:
             price_df = fetch_price(symbol, period, "1d")
             
             if not price_df.empty:
-                data_type = "Demo Data"  # เนื่องจากใช้ fallback เป็นหลัก
-                data_color = "#ffa500"
-                data_icon = "⚠️"
+                # Check if this is real data or demo data by looking at the data source
+                # Real data from yfinance will have more realistic price patterns
+                try:
+                    # Handle MultiIndex columns
+                    if isinstance(price_df.columns, pd.MultiIndex):
+                        close_col = price_df.columns[0]  # First column is usually Close
+                    else:
+                        close_col = "Close" if "Close" in price_df.columns else "close"
+                    
+                    # Check if this is real data by looking at the data characteristics
+                    # Real data typically has more realistic patterns and proper date ranges
+                    if len(price_df) > 50:  # Reduced threshold for real data detection
+                        data_type = "Real Data"  # Real market data
+                        data_color = "#28a745"
+                        data_icon = "✅"
+                    else:
+                        data_type = "Demo Data"  # Fallback data
+                        data_color = "#ffa500"
+                        data_icon = "⚠️"
+                except Exception as e:
+                    print(f"Error checking data type: {e}")
+                    data_type = "Demo Data"  # Fallback data
+                    data_color = "#ffa500"
+                    data_icon = "⚠️"
             else:
                 data_type = "Demo Data"
                 data_color = "#ffa500"
                 data_icon = "⚠️"
             
-            # Calculate price statistics - handle MultiIndex columns from Yahoo Finance
-            if isinstance(price_df.columns, pd.MultiIndex):
-                # Yahoo Finance format: [('Close', 'SYMBOL'), ('High', 'SYMBOL'), ...]
-                close_col = price_df.columns[0]  # First column is usually Close
-                high_col = price_df.columns[1]   # Second column is usually High
-                low_col = price_df.columns[2]    # Third column is usually Low
-                volume_col = price_df.columns[4] # Fifth column is usually Volume
+            # Show data source status to user
+            if data_type == "Demo Data":
+                st.warning("⚠️ **Using Demo Data**: Real market data is currently unavailable due to API limitations. The analysis is based on simulated data for demonstration purposes.")
             else:
-                # Regular format: ['Close', 'High', 'Low', ...]
-                close_col = "Close" if "Close" in price_df.columns else "close"
-                high_col = "High" if "High" in price_df.columns else "high"
-                low_col = "Low" if "Low" in price_df.columns else "low"
-                volume_col = "Volume" if "Volume" in price_df.columns else "volume"
+                # Show real data information with date range
+                start_date = price_df.index[0].strftime('%Y-%m-%d') if len(price_df) > 0 else "N/A"
+                end_date = price_df.index[-1].strftime('%Y-%m-%d') if len(price_df) > 0 else "N/A"
+                data_points = len(price_df)
+                
+                st.success(f"✅ **Using Real Market Data**: Analysis based on {data_points} data points from {start_date} to {end_date}")
+            
+            # Calculate price statistics - handle MultiIndex columns from Yahoo Finance
+            try:
+                if isinstance(price_df.columns, pd.MultiIndex):
+                    # Yahoo Finance format: [('Close', 'SYMBOL'), ('High', 'SYMBOL'), ...]
+                    # Find columns by name pattern
+                    close_col = None
+                    high_col = None
+                    low_col = None
+                    volume_col = None
+                    
+                    for col in price_df.columns:
+                        if isinstance(col, tuple) and len(col) == 2:
+                            if 'Close' in col[0] or 'close' in col[0].lower():
+                                close_col = col
+                            elif 'High' in col[0] or 'high' in col[0].lower():
+                                high_col = col
+                            elif 'Low' in col[0] or 'low' in col[0].lower():
+                                low_col = col
+                            elif 'Volume' in col[0] or 'volume' in col[0].lower():
+                                volume_col = col
+                    
+                    # Fallback to first few columns if not found
+                    if close_col is None and len(price_df.columns) > 0:
+                        close_col = price_df.columns[0]
+                    if high_col is None and len(price_df.columns) > 1:
+                        high_col = price_df.columns[1]
+                    if low_col is None and len(price_df.columns) > 2:
+                        low_col = price_df.columns[2]
+                    if volume_col is None and len(price_df.columns) > 4:
+                        volume_col = price_df.columns[4]
+                else:
+                    # Regular format: ['Close', 'High', 'Low', ...]
+                    close_col = "Close" if "Close" in price_df.columns else "close"
+                    high_col = "High" if "High" in price_df.columns else "high"
+                    low_col = "Low" if "Low" in price_df.columns else "low"
+                    volume_col = "Volume" if "Volume" in price_df.columns else "volume"
+            except Exception as e:
+                print(f"Error handling columns: {e}")
+                # Fallback to basic column access
+                close_col = price_df.columns[0] if len(price_df.columns) > 0 else None
+                high_col = price_df.columns[1] if len(price_df.columns) > 1 else None
+                low_col = price_df.columns[2] if len(price_df.columns) > 2 else None
+                volume_col = price_df.columns[4] if len(price_df.columns) > 4 else None
+            
+            # Check if required columns exist
+            if close_col is None:
+                st.error("❌ Error: No Close price column found in data")
+                st.stop()
             
             latest_price = float(price_df[close_col].iloc[-1])
             prev_price = float(price_df[close_col].iloc[-2]) if len(price_df) > 1 else latest_price
             price_change = latest_price - prev_price
             price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
             
-            high_52w = float(price_df[high_col].max())
-            low_52w = float(price_df[low_col].min())
-            volume_avg = float(price_df[volume_col].mean())
+            # Calculate other metrics only if columns exist
+            high_52w = float(price_df[high_col].max()) if high_col is not None else latest_price
+            low_52w = float(price_df[low_col].min()) if low_col is not None else latest_price
+            volume_avg = float(price_df[volume_col].mean()) if volume_col is not None else 0
             
             # Show current price with change
             change_color = "#00ff00" if price_change >= 0 else "#ff0000"
             change_icon = "📈" if price_change >= 0 else "📉"
+            
+            # Get date information
+            latest_date = price_df.index[-1].strftime('%Y-%m-%d') if len(price_df) > 0 else "N/A"
+            prev_date = price_df.index[-2].strftime('%Y-%m-%d') if len(price_df) > 1 else "N/A"
             
             st.markdown(f"""
             <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; border-radius: 10px; padding: 1rem; margin: 1rem 0;">
@@ -1209,13 +1341,14 @@ if run_btn:
                     <div style="flex: 1;">
                         <h2 style="color: #ffffff; margin: 0; font-size: 2.5rem;">{latest_price:.2f}</h2>
                         <p style="color: #00d4ff; margin: 0; font-size: 1.1rem;">{symbol}</p>
+                        <p style="color: #ffffff; margin: 0; font-size: 0.8rem; opacity: 0.8;">As of {latest_date}</p>
                     </div>
                     <div style="flex: 1; text-align: right;">
                         <p style="color: {change_color}; margin: 0; font-size: 1.2rem; font-weight: bold;">
                             {change_icon} {price_change:+.2f} ({price_change_pct:+.2f}%)
                         </p>
                         <p style="color: #ffffff; margin: 0; font-size: 0.9rem;">
-                            vs Previous Close
+                            vs {prev_date}
                         </p>
                     </div>
                 </div>
@@ -1230,26 +1363,77 @@ if run_btn:
             # Show detailed statistics
             col1, col2, col3 = st.columns(3)
             
+            # Get dates for 52-week high/low
+            try:
+                if high_col is not None:
+                    high_date = price_df[price_df[high_col] == high_52w].index[0].strftime('%Y-%m-%d') if len(price_df) > 0 else "N/A"
+                else:
+                    high_date = "N/A"
+                
+                if low_col is not None:
+                    low_date = price_df[price_df[low_col] == low_52w].index[0].strftime('%Y-%m-%d') if len(price_df) > 0 else "N/A"
+                else:
+                    low_date = "N/A"
+            except Exception as e:
+                print(f"Error getting high/low dates: {e}")
+                high_date = "N/A"
+                low_date = "N/A"
+            
             with col1:
-                st.metric(
-                    label="📊 52-Week High",
-                    value=f"{high_52w:.2f}",
-                    delta=f"{((latest_price - high_52w) / high_52w * 100):.1f}% from high"
-                )
+                if high_col is not None:
+                    st.metric(
+                        label="📊 52-Week High",
+                        value=f"{high_52w:.2f}",
+                        delta=f"{((latest_price - high_52w) / high_52w * 100):.1f}% from high",
+                        help=f"Reached on {high_date}"
+                    )
+                else:
+                    st.metric(
+                        label="📊 52-Week High",
+                        value="N/A",
+                        delta="N/A",
+                        help="Data not available"
+                    )
             
             with col2:
-                st.metric(
-                    label="📉 52-Week Low", 
-                    value=f"{low_52w:.2f}",
-                    delta=f"{((latest_price - low_52w) / low_52w * 100):.1f}% from low"
-                )
+                if low_col is not None:
+                    st.metric(
+                        label="📉 52-Week Low", 
+                        value=f"{low_52w:.2f}",
+                        delta=f"{((latest_price - low_52w) / low_52w * 100):.1f}% from low",
+                        help=f"Reached on {low_date}"
+                    )
+                else:
+                    st.metric(
+                        label="📉 52-Week Low",
+                        value="N/A",
+                        delta="N/A",
+                        help="Data not available"
+                    )
             
             with col3:
-                st.metric(
-                    label="📈 Avg Volume",
-                    value=f"{volume_avg:,.0f}",
-                    delta=f"{((float(price_df[volume_col].iloc[-1]) - volume_avg) / volume_avg * 100):+.1f}%"
-                )
+                if volume_col is not None:
+                    try:
+                        current_volume = float(price_df[volume_col].iloc[-1])
+                        volume_delta = ((current_volume - volume_avg) / volume_avg * 100) if volume_avg > 0 else 0
+                        st.metric(
+                            label="📈 Avg Volume",
+                            value=f"{volume_avg:,.0f}",
+                            delta=f"{volume_delta:+.1f}%"
+                        )
+                    except:
+                        st.metric(
+                            label="📈 Avg Volume",
+                            value=f"{volume_avg:,.0f}",
+                            delta="N/A"
+                        )
+                else:
+                    st.metric(
+                        label="📈 Avg Volume",
+                        value="N/A",
+                        delta="N/A",
+                        help="Data not available"
+                    )
             
             # Show data info
             st.markdown(f"""

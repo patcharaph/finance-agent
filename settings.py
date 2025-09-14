@@ -139,13 +139,13 @@ class LLMSettings:
     """LLM configuration settings"""
     
     # Model settings
-    model_name: str = "gpt-3.5-turbo"
+    model_name: str = "openrouter/auto"
     max_tokens: int = 1000
     temperature: float = 0.7
     
     # API settings
     api_key: str = ""
-    base_url: str = ""
+    base_url: str = "https://openrouter.ai/api/v1"
     timeout: int = 30
     
     # Retry settings
