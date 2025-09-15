@@ -2,7 +2,7 @@
 # Copy this file to .env and modify as needed
 
 # OpenRouter API Configuration
-OPENROUTER_API_KEY=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
+OPENROUTER_API_KEY=
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_MODEL=openrouter/auto
 OPENROUTER_SITE_URL=https://github.com/patcharaph/finance-agent.git
